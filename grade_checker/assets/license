@@ -1,0 +1,31 @@
+This software is distributed under the MIT license. It is created by a student of
+GSMST, and is not affiliated with GSMST or eClass in any way.
+
+In short, using this software is at your own risk. There may be bugs, security risks,
+etc. Specifically, your PASSWORD and USERNAME, if entered, will be stored in {path} as
+utf-8 encoded bytes, i.e., plain text. However, if you feel bad about it, you can
+download html manually by hand and this program shall parse it. But I believe it would
+be more cumbersome than just use calculator, so this option won't be supported well. 
+
+MIT license is provided below:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+The source code is available on GitHub: https://github.com/Yubo-Cao/SchoolUtil.
+
+If you hit NEXT, you agree to the above statement.
