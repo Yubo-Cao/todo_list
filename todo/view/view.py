@@ -6,7 +6,7 @@ import gender_guesser.detector as gender
 
 from datetime import datetime
 
-from grade_checker.components import *
+from grade_checker.view.components import *
 from concurrent.futures import ThreadPoolExecutor
 from grade_checker.db import Course, Teacher, Grade_Change
 from grade_checker.logger import logger
@@ -18,7 +18,7 @@ from grade_checker.spider import (
     refresh_db,
     parse_grade_from_html,
 )
-from grade_checker.config import cfg
+from grade_checker.yamlfile import cfg
 
 from grade_checker.calculate import (
     calculate_unweighted_avg,

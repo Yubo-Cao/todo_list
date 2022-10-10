@@ -5,10 +5,10 @@ from collections.abc import Callable, Iterator
 from numbers import Number
 from typing import Any, Iterable, get_type_hints
 
-from grade_checker.config import Config
+from grade_checker.yamlfile import YamlFile
 from grade_checker.logger import logger
 
-cfg = Config()
+cfg = YamlFile()
 connection = sqlite3.connect(
     cfg.grade_checker.db_path, check_same_thread=False, isolation_level=None
 )
