@@ -1,45 +1,27 @@
-import functools
-import logging
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Mapping, Sequence, Optional
+from typing import Optional
 
+from todo.model.observables import ObservableDict, observable
 from yaml import YAMLError, dump, load
+
 try:
     from yaml import CDumper as Dumper
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader, Dumper
 
-from todo.error import YamlFileException
+from todo.error import YamlFileError
+from todo.log import get_logger
 
-logger = logging.getLogger(__name__)
-
-
-def _ensure_loaded(func):
-    @functools.wraps(func)
-    def _deco(self: "YamlFile", *args, **kwargs):
-        self._load()
-        return func(self, *args, **kwargs)
-
-    return _deco
-
-
-def _ensure_dumped(func):
-    @functools.wraps(func)
-    def _deco(self: "YamlFile", *args, **kwargs):
-        self._load()
-        res = func(self, *args, **kwargs)
-        self._dump()
-        return res
-
-    return _deco
+logger = get_logger(__name__, use_config=False)
 
 
 class YamlFile:
     def __init__(
-            self,
-            path: Path,
-            _parent: Optional["YamlFile"] = None,
+        self,
+        path: Path | str,
+        _parent: Optional["YamlFile"] = None,
     ):
         """
         Represents a YAML file. Provide access to the data in the file as a
@@ -50,102 +32,99 @@ class YamlFile:
         :param path: The path to the file.
         :param _parent: Internal use only.
         """
+
         if path is None and _parent is None:
             raise ValueError("Path must not be None.")
         elif path is not None and _parent is not None:
             raise ValueError("Do not pass any argument for parent.")
         elif path is not None:
-            self.path = Path(path)
+            self.__dict__["path"] = Path(path)
+            self._load()
         else:
-            self._parent = _parent
+            self.__dict__["_parent"] = _parent
 
-    @_ensure_dumped
     def __setitem__(self, key, item):
         self._data[key] = item
 
-    @_ensure_loaded
     def __getitem__(self, key):
         return self._iterable_wrapper(self._data[key])
 
-    @_ensure_dumped
     def __delitem__(self, key):
         del self._data[key]
 
-    @_ensure_loaded
     def __contains__(self, key):
         return key in self._data
 
-    @_ensure_loaded
     def __len__(self):
         return len(self._data)
 
-    @_ensure_loaded
     def __repr__(self):
         return f"{self.__class__.__name__}({self._data!r})"
 
-    @_ensure_loaded
     def __str__(self):
         return str(self._data)
 
-    @_ensure_loaded
     def __iter__(self):
-        return iter(self._data)
+        return (self._iterable_wrapper(x) for x in self._data)
 
-    @_ensure_loaded
-    def __getattr__(self, name, default=...):
-        if (
-                result
-                if (result := getattr(self.__dict__.get("_data", ...), name, ...)) is not ...
-                else (result := self.__dict__.get("_data", ...).get(name, ...)) is not ...
-        ):
-            if hasattr(result, "__call__"):
-                func = result
+    _PLACEHOLDER = object()
 
-                @functools.wraps(func)
-                def _ensured(*args, **kwargs):
-                    res = func(*args, **kwargs)
-                    self._dump()
-                    return self._iterable_wrapper(res)
-
-                return _ensured
-            return self._iterable_wrapper(result)
-        elif default is not ...:
+    def __getattr__(self, name, default=_PLACEHOLDER):
+        data = self.__dict__.get("_data", {})
+        if isinstance(data, dict) and name in data:
+            return self._iterable_wrapper(data[name])
+        elif hasattr(data, name):
+            return getattr(data, name)
+        elif default is not self._PLACEHOLDER:
             return default
         else:
             raise AttributeError(f"{self.__class__!r} object has no attribute {name!r}")
+
+    def _iterable_wrapper(self, item):
+        if not isinstance(item, Iterable) or isinstance(item, (str, bytes)):
+            return item
+        obs = observable(item)
+        obs.add_observer(self._on_change)
+        return obs
+
+    def __setattr__(self, key, value):
+        if key in self.__dict__:
+            super().__setattr__(key, value)
+        else:
+            self[key] = value
+
+    def _pure_load(self: "YamlFile") -> None:
+        data = load(self.path.read_text(encoding="utf-8"), Loader=Loader)
+        data = data if data is not None else {}
+        data = observable(data)
+        data.add_observer(self._on_change)
+        self.__dict__["_data"] = data
 
     def _load(self: "YamlFile") -> None:
         dct = self.__dict__
         try:
             if "_data" not in dct and "parent" not in dct and "path" in dct:
-                self._data = load(self.path.read_text(encoding='utf-8'), Loader)
-                self._data = self._data or {}
+                self._pure_load()
         except FileNotFoundError:
-            logger.info(f'Config file {self.path} does not exists. Creating.')
-            dct["path"].parent.mkdir(parents=True, exist_ok=True)
-            dct["path"].touch()
-            self._data = self._data or {}
+            logger.info(f"Config file {self.path} does not exists. Creating.")
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.touch()
+            dct["_data"] = ObservableDict({})
         except YAMLError as e:
-            raise YamlFileException(f"File is corrupted {e!r}", self.path) from e
+            raise YamlFileError(f"File is corrupted {e!r}", self.path) from e
         except IOError as e:
-            raise YamlFileException(f"Unknown IOError {e!r} while reading file", self.path) from e
+            raise YamlFileError(
+                f"Unknown IOError {e!r} while reading file", self.path
+            ) from e
 
     def _dump(self: "YamlFile") -> None:
+        dct = self.__dict__
         try:
-            self.path.write_text(dump(self._data, Dumper=Dumper), encoding='utf-8')
-        except AttributeError:
-            self._parent._dump()
+            if "_parent" in dct:
+                return dct["_parent"]._dump()
+            self.path.write_text(dump(self._data, Dumper=Dumper), encoding="utf-8")
         except IOError as e:
-            raise YamlFileException(f"Unknown IOError {e!r}", self.path) from e
+            raise YamlFileError(f"Unknown IOError {e!r}", self.path) from e
 
-    def _iterable_wrapper(self, data):
-        if (
-                not isinstance(data, str)
-                and isinstance(data, Sequence)
-                or isinstance(data, Mapping)
-        ):
-            # this is intentional
-            res = YamlFile(None, _parent=self)  # type: ignore
-            res._data = data
-            return res
-        return data
+    def _on_change(self, changes):
+        self._dump()

@@ -6,11 +6,11 @@ import gender_guesser.detector as gender
 
 from datetime import datetime
 
-from grade_checker.view.components import *
+from todo.view.components import *
 from concurrent.futures import ThreadPoolExecutor
-from grade_checker.db import Course, Teacher, Grade_Change
-from grade_checker.logger import logger
-from grade_checker.spider import (
+from todo.db import Course, Teacher, Grade_Change
+from todo.log import logger
+from todo.spider import (
     fetch_grade_book_data,
     fetch_navigation_data,
     fetch_teacher_course_data,
@@ -18,9 +18,9 @@ from grade_checker.spider import (
     refresh_db,
     parse_grade_from_html,
 )
-from grade_checker.yamlfile import cfg
+from todo.model.yamlfile import cfg
 
-from grade_checker.calculate import (
+from todo.calculate import (
     calculate_unweighted_avg,
     calculate_weighted_avg_html,
     get_latest_grade_change,
@@ -573,7 +573,7 @@ def create_normal_html_main(root):
                 logger.error(f"Error while parsing html: {e!r}")
                 remove_status()
                 grid_exception(f"HTML at {cfg.grade_checker.html_path} is invalid")
-                
+
         else:
             remove_status()
             grid_exception(
@@ -585,7 +585,7 @@ def create_normal_html_main(root):
     def remove_status():
         status.grid_remove()
         na.grid_remove()
-    
+
     def grid_status():
         status.grid(row=0, column=0, sticky="news")
         na.grid(row=1, column=0, sticky="news")
@@ -594,7 +594,7 @@ def create_normal_html_main(root):
         warning.grid(row=0, column=0, sticky="news")
         message.grid(row=1, column=0, sticky="news")
         message["text"] = msg
-        
+
     def remove_exception():
         warning.grid_remove()
         message.grid_remove()

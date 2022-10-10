@@ -5,12 +5,13 @@ from collections.abc import Callable, Iterator
 from numbers import Number
 from typing import Any, Iterable, get_type_hints
 
-from grade_checker.yamlfile import YamlFile
-from grade_checker.logger import logger
+from todo.log import logger
+from todo.model.config import config
 
-cfg = YamlFile()
 connection = sqlite3.connect(
-    cfg.grade_checker.db_path, check_same_thread=False, isolation_level=None
+    config.paths.db,
+    check_same_thread=False,
+    isolation_level=None,
 )
 
 
@@ -37,7 +38,7 @@ class Field:
         not_null: bool = True,
         primary_key: bool = False,
     ) -> None:
-        if not callable(constructor) or constructor is type(None):
+        if not callable(constructor) or isinstance(constructor, type(None)):
             raise TypeError("{name!r} type hint must be callable")
         self._name = f"{self.__class__.__name__}-{name}"
         self.name = name
@@ -215,7 +216,7 @@ class Model:
             )
         except sqlite3.IntegrityError as e:
             logger.error(
-                f"Insert failed {e!r} for {', '.join(f'{k}={v}' for k,v in zip(fields_names, values))}"
+                f"Insert failed {e!r} for {', '.join(f'{k}={v}' for k, v in zip(fields_names, values))}"
             )
 
     def __iter__(self) -> Iterator[Any]:
@@ -312,7 +313,7 @@ class Model:
             tuple(restrictions.values()),
         ).fetchone()
         if not result:
-            msg = f"No {cls.__name__} found with {', '.join(f'{k}={v}' for k,v in restrictions.items())}"
+            msg = f"No {cls.__name__} found with {', '.join(f'{k}={v}' for k, v in restrictions.items())}"
             logger.error(msg)
             raise ValueError(msg)
         return cls(*result)

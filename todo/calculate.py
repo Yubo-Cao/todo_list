@@ -1,16 +1,14 @@
 from datetime import datetime
-
-import matplotlib.pyplot as plt
-import matplotlib.dates as dates
-
-from dateutil import tz
 from itertools import chain
-import numpy as np
 
+import matplotlib.dates as dates
+import matplotlib.pyplot as plt
+import numpy as np
+from dateutil import tz
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from grade_checker.db import Course, Grade, connection
-from grade_checker.logger import logger
+from todo.db import Course, Grade, connection
+from todo.log import logger
 
 today = datetime.utcnow()
 start_of_day_timestamp = datetime(
@@ -86,7 +84,7 @@ def find_grade_with_semester(semester):
             Grade(*data)
             for data in cursor.execute(
                 """SELECT * FROM grade WHERE (SELECT semester FROM course WHERE
-                   course.id = grade.course_id) = ?""",
+               course.id = grade.course_id) = ?""",
                 (semester,),
             ).fetchall()
         ]

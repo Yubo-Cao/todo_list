@@ -118,7 +118,7 @@ class DefaultEntry(ttk.Entry):
                 return False
             if self.checker:
                 return self.checker(new_val, method, previous, diff)
-            
+
             match method:
                 case "key":
                     if self.key_re:
