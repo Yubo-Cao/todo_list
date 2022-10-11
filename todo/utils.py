@@ -396,56 +396,55 @@ V = TypeVar("V")
 DELEGATE_BLACKLIST = {
     "__class__",
     "__delattr__",
-    "__dir__",
-    "__doc__",
     "__getattribute__",
     "__getattr__",
-    "__hash__",
     "__setattr__",
-    "__setattribute__",
-    "__sizeof__",
-    "__str__",
-    "__subclasshook__",
-    "__weakref__",
 }
 
 
 def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optional[Callable[[T], V]] = None,
-             name: Optional[str] = ""):
+             instance_name: Optional[str] = ""):
     """
     Composition & delegate.
 
     :param cls: the class that holds the V instance
     :param target: the target class
     :param instance_getter: the function to get the instance of V
-    :param name: the name of the instance
+    :param instance_name: the name of the instance
     :return: the decorated class
     """
 
     if cls is None:
-        return functools.partial(delegate, target=target, instance_getter=instance_getter, name=name)
+        return functools.partial(delegate, target=target, instance_getter=instance_getter, instance_name=instance_name)
 
-    if name == "":
-        name = target.__name__.lower()
+    if instance_name == "":
+        instance_name = target.__name__.lower()
     if instance_getter is None:
         def instance_getter(self):
-            return getattr(self, name)
+            return getattr(self, instance_name)
 
-    def _deco(meth):
-        @functools.wraps(meth)
-        def _impl(self, *args, **kwargs):
-            return meth(instance_getter(self), *args, **kwargs)
+    def _method(method_name: str):
+        def _call(self, *args, **kwargs):
+            try:
+                instance: V = instance_getter(self)
+            except AttributeError:
+                raise AttributeError(f"{self} does not hold an instance of {target}.")
+            try:
+                method: Callable = getattr(instance, method_name)
+            except AttributeError:
+                raise AttributeError(f"{cls.__name__} has no attribute {method_name}")
+            return method(*args, **kwargs)
 
-        return _impl
+        return _call
 
-    for n in dir(target):
-        meth = getattr(target, n)
-        if not inspect.isfunction(meth):
+    for attribute_name in dir(target):
+        attribute = getattr(target, attribute_name)
+        if not inspect.isfunction(attribute):
             continue
-        if n in DELEGATE_BLACKLIST:
+        if attribute_name in DELEGATE_BLACKLIST:
             continue
-        if n in cls.__dict__:
+        if attribute_name in cls.__dict__:
             continue
-        setattr(cls, n, _deco(meth))
+        setattr(cls, attribute_name, _method(attribute_name))
 
     return cls
