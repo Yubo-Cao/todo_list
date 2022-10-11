@@ -3,7 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    property QObject model
+    property var model
 
     ColumnLayout {
         anchors {

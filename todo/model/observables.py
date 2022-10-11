@@ -1,10 +1,10 @@
-from collections.abc import Callable
-from typing import Any, Generic, Protocol, TypeVar
+import functools
+from collections.abc import Iterable
+from typing import Any, Generic, Protocol, TypeVar, cast
 
-from todo.model.yamlfile import YamlFile
 from todo.log import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, use_config=False)
 
 T = TypeVar("T")
 
@@ -14,11 +14,11 @@ class Observer(Protocol):
         """Called when the observed object changes"""
 
 
-class Observable(Generic[T]):
+class Observable:
     def __init__(self, value) -> None:
         self._value = value
         self._observers: list[Observer] = []
-    
+
     def attach(self, observer: Observer) -> None:
         """Attach an observer to the observable"""
         for observer in self._observers:
@@ -41,7 +41,59 @@ class Observable(Generic[T]):
             observer(value)
 
 
-class ObservableList(Observable[list]):
+class ObservableCollection(Observable, Generic[T]):
+    def __init__(self, data: T) -> None:
+        super().__init__(data)
+        self._data = data
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for name, meth in cls.__dict__.items():
+            if not callable(meth) or getattr(meth, '__name__', '') in {"__init__", "__new__", "__setitem__"}:
+                continue
+
+            setattr(cls, name, ObservableCollection._observe_wrapper(meth))
+        return cls
+
+    @classmethod
+    def _observe_wrapper(cls, fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            return wrap_observable(fn(*args, **kwargs))
+
+        return wrapper
+
+    def __setitem__(self, key, item):
+        self._data[key] = item
+        self.notify([key])
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __delitem__(self, key):
+        del self._data[key]
+        self.notify([key])
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __len__(self):
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self._data!r})"
+
+    def __str__(self):
+        return f"{type(self).__name__}({self._data!r})"
+
+    def __eq__(self, other):
+        return self._data == other
+
+
+class ObservableList(ObservableCollection[list]):
     """
     Represent an observable list.
     """
@@ -50,12 +102,6 @@ class ObservableList(Observable[list]):
         super().__init__(data)
 
     _PLACEHOLDER = object()
-
-    def __getattr__(self, item, default=_PLACEHOLDER):
-        # unimplemented methods shall not be called
-        if default is self._PLACEHOLDER:
-            raise AttributeError(f"ObservableList has no attribute {item}")
-        return default
 
     def append(self, item):
         self._data.append(item)
@@ -88,7 +134,7 @@ class ObservableList(Observable[list]):
         self._data.pop(idx)
         self.notify([idx])
 
-    def extend(self, iterable: list[T]):
+    def extend(self, iterable):
         it = list(iterable)
         self._data.extend(it)
         self.notify(list(range(len(self._data) - len(it), len(self._data))))
@@ -110,6 +156,9 @@ class ObservableList(Observable[list]):
         self._data.insert(idx, item)
         self.notify([idx])
 
+    def __eq__(self, other):
+        return self._data == other
+
     def __add__(self, other):
         return self._data + other
 
@@ -123,7 +172,7 @@ class ObservableList(Observable[list]):
         return item in self._data
 
 
-class ObservableDict(Observable[dict]):
+class ObservableDict(ObservableCollection[dict]):
     """Represents an observable dict"""
 
     def __init__(self, data: dict):
@@ -189,11 +238,11 @@ class ObservableDict(Observable[dict]):
         return item in self._data
 
 
-class AttrObservableDict(Observable[dict]):
-    """An decorator for an observable dict that allows to access the dict's values as attributes"""
+class AttrObservableDict(ObservableCollection[dict]):
+    """A decorator for an observable dict that allows to access the dict's values as attributes"""
 
     def __init__(self, data: ObservableDict):
-        super().__init__(data)
+        super().__init__(cast(dict, data))
         if not isinstance(data, ObservableDict):
             raise TypeError("data must be an ObservableDict")
         data.attach(self.notify)
@@ -212,8 +261,8 @@ class AttrObservableDict(Observable[dict]):
             self.notify([key])
 
 
-class ObservableSet(Observable[set]):
-    """Represents an obserable set"""
+class ObservableSet(ObservableCollection[set]):
+    """Represents an observable set"""
 
     def __init__(self, data: set):
         super().__init__(data)
@@ -275,3 +324,23 @@ def observable(data) -> Observable:
             return ObservableSet(data)
         case _:
             raise TypeError(f"Cannot make {type(data)} observable")
+
+
+def wrap_observable(data) -> Any:
+    """Make sure data is observed, as much as possible"""
+
+    if not isinstance(data, Iterable) or isinstance(data, str | bytes):
+        return data
+    if isinstance(data, Observable):
+        return data
+    match data:
+        case list():
+            return ObservableList(data)
+        case dict():
+            return AttrObservableDict(ObservableDict(data))
+        case set():
+            return ObservableSet(data)
+        case tuple():
+            return tuple(wrap_observable(item) for item in data)
+        case _:
+            return data

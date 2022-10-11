@@ -4,7 +4,8 @@ import sys
 from PySide6 import QtCore
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtWidgets import QGraphicsEffect
+
+from todo.model import TodoListModel
 
 
 def qt_message_handler(mode, context, message):
@@ -30,4 +31,4 @@ if __name__ == '__main__':
     engine.load(QtCore.QUrl.fromLocalFile(qml_filename))
     if not engine.rootObjects():
         sys.exit(-1)
-    model = 
+    model = TodoListModel()

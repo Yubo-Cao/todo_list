@@ -6,7 +6,6 @@ from PIL import Image
 
 from todo.globals import data_path
 from todo.model.observables import ObservableList
-from todo.utils import singleton
 
 
 class TodoItem(NamedTuple):
@@ -23,4 +22,4 @@ class TodoItem(NamedTuple):
     due_date: Optional[datetime] = None
 
 
-todo_list: ObservableList[TodoItem] = ObservableList(data_path / "todo_list.yaml")
+todo_list: ObservableList = ObservableList(data_path / "todo_list.yaml")

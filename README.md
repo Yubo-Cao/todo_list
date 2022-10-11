@@ -1,16 +1,21 @@
-# School Notify
+# Todo List
 
-This is software that integrates the functionality of StudentVUE into the
-desktop environment, allowing you to receive notifications about your grades
-and assignments.
+This is a to-do list app that aims to help you manage your tasks. It uses the following technologies:
 
-This software is developed with the following goals:
+- Qt, PySide6
+- Event driven programming
+- QML, QtQuick
+- YAML
+- aiohttp, ayncio
+- Thread, lock, and event queue
 
-- To be as lightweight as possible (no Webdriver, no Electron, no CSS frameworks)
-- To be as fast as possible (asynchronous, concurrent, and parallel)
-- To be as secure as possible (encryption of password)
-- To be as extensible as possible (extensive documentation and modularity)
+In addition to a simple to-do list, it has some unique features that I think
+are worth sharing.
 
-It does not aim to be cross-platform, but it should work on any platform that
-supports Python 3.10.
-
+- It is a desktop app.
+- It supports plugins. Currently, there is a plugin that checks grade changes
+  on the student portal of my high school.
+    - Becasue of the usage of multi-threading, the plugin does not block the GUI
+      thread.
+    - Because of async programming, multiple plugins can be run at the same
+      time quickly.

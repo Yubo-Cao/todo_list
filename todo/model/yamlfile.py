@@ -2,14 +2,15 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Optional
 
-from todo.model.observables import ObservableDict, observable
 from yaml import YAMLError, dump, load
+
+from todo.model.observables import ObservableDict, observable, ObservableCollection
 
 try:
     from yaml import CDumper as Dumper
     from yaml import CLoader as Loader
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import Loader, Dumper # type: ignore
 
 from todo.error import YamlFileError
 from todo.log import get_logger
@@ -21,15 +22,16 @@ class YamlFile:
     def __init__(
         self,
         path: Path | str,
+        data: ObservableCollection = None,
         _parent: Optional["YamlFile"] = None,
     ):
         """
-        Represents a YAML file. Provide access to the data in the file as a
-        dictionary. If the file does not exist, it will be created.
-        You can use file.attr to access the data in the file, and file.attr = x
-        to set the value of attr to x.
+        Provide serialization support for observable collections. If the file does
+        not exist, it will be created. You can use file.attr to access the data in the file,
+        and file.attr = x to set the value of attr to x.
 
         :param path: The path to the file.
+        :param data: The data to be stored in the file.
         :param _parent: Internal use only.
         """
 
@@ -39,15 +41,21 @@ class YamlFile:
             raise ValueError("Do not pass any argument for parent.")
         elif path is not None:
             self.__dict__["path"] = Path(path)
-            self._load()
+            if data is not None:
+                self.__dict__["_data"] = data
+                self._dump()
+            else:
+                self._load()
         else:
             self.__dict__["_parent"] = _parent
+            self.__dict__["_data"] = data
+            assert data is not None, "Data must not be None."
 
     def __setitem__(self, key, item):
         self._data[key] = item
 
     def __getitem__(self, key):
-        return self._iterable_wrapper(self._data[key])
+        return self._observable_wrapper(self._data[key])
 
     def __delitem__(self, key):
         del self._data[key]
@@ -65,14 +73,17 @@ class YamlFile:
         return str(self._data)
 
     def __iter__(self):
-        return (self._iterable_wrapper(x) for x in self._data)
+        return (self._observable_wrapper(x) for x in self._data)
+
+    def __eq__(self, other):
+        return self._data == other
 
     _PLACEHOLDER = object()
 
     def __getattr__(self, name, default=_PLACEHOLDER):
         data = self.__dict__.get("_data", {})
-        if isinstance(data, dict) and name in data:
-            return self._iterable_wrapper(data[name])
+        if isinstance(data, ObservableDict | dict) and name in data:
+            return self._observable_wrapper(data[name])
         elif hasattr(data, name):
             return getattr(data, name)
         elif default is not self._PLACEHOLDER:
@@ -80,11 +91,11 @@ class YamlFile:
         else:
             raise AttributeError(f"{self.__class__!r} object has no attribute {name!r}")
 
-    def _iterable_wrapper(self, item):
+    def _observable_wrapper(self, item):
         if not isinstance(item, Iterable) or isinstance(item, (str, bytes)):
             return item
         obs = observable(item)
-        obs.add_observer(self._on_change)
+        obs.attach(self._on_change)
         return obs
 
     def __setattr__(self, key, value):
@@ -94,10 +105,11 @@ class YamlFile:
             self[key] = value
 
     def _pure_load(self: "YamlFile") -> None:
+        self.path.touch(exist_ok=True)
         data = load(self.path.read_text(encoding="utf-8"), Loader=Loader)
         data = data if data is not None else {}
         data = observable(data)
-        data.add_observer(self._on_change)
+        data.attach(self._on_change)
         self.__dict__["_data"] = data
 
     def _load(self: "YamlFile") -> None:
@@ -110,6 +122,7 @@ class YamlFile:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.touch()
             dct["_data"] = ObservableDict({})
+            self._dump()
         except YAMLError as e:
             raise YamlFileError(f"File is corrupted {e!r}", self.path) from e
         except IOError as e:

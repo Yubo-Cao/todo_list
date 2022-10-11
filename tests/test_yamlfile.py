@@ -5,8 +5,7 @@ from yaml import load, Loader
 from todo.model.yamlfile import YamlFile
 
 path = Path("tests/test.yaml")
-if path.exists():
-    path.unlink()
+path.unlink(missing_ok=True)
 yaml = YamlFile(path)
 
 
@@ -44,6 +43,6 @@ def test_fn():
     t = yaml.setdefault('test', {'a': 'b'})
     assert yaml._data == {'test': {}}
     assert t == {}
-    t.a = 'b'
+    t.data = 'b'
     assert yaml._data == {'test': {'a': 'b'}}
     assert t == {'a': 'b'}

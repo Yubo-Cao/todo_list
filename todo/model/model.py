@@ -4,14 +4,16 @@ from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
 from PySide6.QtGui import QPixmap, QImage
 
 from todo.model import ObservableList
-from todo.model.data import todo_list, TodoItem
+from todo.model.data import todo_list
 
 
 class TodoListModel(QAbstractListModel):
-    def __init__(self, *args, todos: ObservableList[TodoItem] = None, **kwargs):
+    def __init__(self, *args, todos: ObservableList = None, **kwargs):
         super().__init__(*args, **kwargs)
+        if todos is None:
+            todos = ObservableList()
         self.todos = todos
-        todos.add_callback(self.on_change_handler)
+        todos.attach(self.on_change_handler)
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.todos)
