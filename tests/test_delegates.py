@@ -84,8 +84,6 @@ def test_setattr():
 
 
 def test_getattr():
-    history = []
-
     class A:
         def __getattr__(self, item):
             if item == "c":
@@ -97,7 +95,13 @@ def test_getattr():
         def __init__(self, a):
             self.a = a
 
+        def __getattr__(self, item):
+            if item == "d":
+                return 2
+            raise AttributeError
+
     data = [1, 2, 3]
     b = B(a := A())
     assert b.c == 1
     assert a.c == 1
+    assert b.d == 2
