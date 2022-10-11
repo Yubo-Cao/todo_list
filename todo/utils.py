@@ -3,7 +3,7 @@ import functools
 import inspect
 from collections.abc import Callable, Coroutine
 from threading import Thread
-from typing import Any, Literal, TypeVar, Optional, Union
+from typing import Any, Literal, TypeVar, Optional, Union, Type
 
 from todo.log import get_logger
 
@@ -388,3 +388,48 @@ def singleton(cls):
         return instances[cls]
 
     return _singleton
+
+
+T = TypeVar("T")
+V = TypeVar("V")
+
+
+def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optional[Callable[[T], V]] = None,
+             name: Optional[str] = ""):
+    """
+    Composition & delegate.
+
+    :param cls: the class that holds the V instance
+    :param target: the target class
+    :param instance_getter: the function to get the instance of V
+    :param name: the name of the instance
+    :return: the decorated class
+    """
+
+    if cls is None:
+        return functools.partial(delegate, target=target, instance_getter=instance_getter, name=name)
+
+    if name == "":
+        name = target.__name__.lower()
+    if instance_getter is None:
+        def instance_getter(self):
+            return getattr(self, name)
+
+    def _deco(meth):
+        @functools.wraps(meth)
+        def _impl(self, *args, **kwargs):
+            return meth(instance_getter(self), *args, **kwargs)
+
+        return _impl
+
+    for n in dir(target):
+        meth = getattr(target, n)
+        if not inspect.isfunction(meth):
+            continue
+        if n == '__getattribute__' or n == '__getattr__':
+            continue
+        if n in cls.__dict__:
+            continue
+        setattr(cls, n, _deco(meth))
+
+    return cls
