@@ -401,9 +401,50 @@ DELEGATE_BLACKLIST = {
     "__setattr__",
 }
 
+COMMON_DUNDER_METHODS = {
+    "__getitem__",
+    "__setitem__",
+    "__delitem__",
+    "__iter__",
+    "__len__",
+    "__contains__",
+    "__reversed__",
+    "__eq__",
+    "__ne__",
+    "__lt__",
+    "__le__",
+    "__gt__",
+    "__ge__",
+    "__hash__",
+    "__str__",
+    "__repr__",
+    "__add__",
+    "__sub__",
+    "__mul__",
+    "__truediv__",
+    "__floordiv__",
+    "__mod__",
+    "__divmod__",
+    "__pow__",
+    "__or__",
+    "__and__",
+    "__xor__",
+    "__enter__",
+    "__exit__",
+    "__call__",
+    "__await__",
+    "__aiter__",
+    "__anext__",
+    "__aenter__",
+    "__aexit__",
+    "__int__",
+    "__bool__",
+    "__format__",
+}
 
-def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optional[Callable[[T], V]] = None,
-             instance_name: Optional[str] = ""):
+
+def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_getter: Optional[Callable[[T], V]] = None,
+             instance_name: Optional[str] = "", suppress_log: bool = False, enable_setattr: bool = False):
     """
     Composition & delegate.
 
@@ -411,11 +452,14 @@ def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optio
     :param target: the target class
     :param instance_getter: the function to get the instance of V
     :param instance_name: the name of the instance
+    :param suppress_log: suppress the warning if target is not provided
+    :param enable_setattr: enable __setattr__
     :return: the decorated class
     """
 
     if cls is None:
-        return functools.partial(delegate, target=target, instance_getter=instance_getter, instance_name=instance_name)
+        return functools.partial(delegate, target=target, instance_getter=instance_getter, instance_name=instance_name,
+                                 suppress_log=suppress_log, enable_setattr=enable_setattr)
 
     if instance_name == "":
         instance_name = target.__name__.lower()
@@ -423,28 +467,65 @@ def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optio
         def instance_getter(self):
             return getattr(self, instance_name)
 
+    def _get_instance(self):
+        instance = instance_getter(self)
+        if instance is None:
+            raise AttributeError(f"{self} does not hold an instance of {target}.") from None
+        return instance
+
     def _method(method_name: str):
         def _call(self, *args, **kwargs):
             try:
-                instance: V = instance_getter(self)
+                method: Callable = getattr(_get_instance(self), method_name)
             except AttributeError:
-                raise AttributeError(f"{self} does not hold an instance of {target}.")
-            try:
-                method: Callable = getattr(instance, method_name)
-            except AttributeError:
-                raise AttributeError(f"{cls.__name__} has no attribute {method_name}")
+                raise AttributeError(f"{cls.__name__} has no attribute {method_name}") from None
             return method(*args, **kwargs)
 
         return _call
 
-    for attribute_name in dir(target):
-        attribute = getattr(target, attribute_name)
-        if not inspect.isfunction(attribute):
-            continue
-        if attribute_name in DELEGATE_BLACKLIST:
-            continue
-        if attribute_name in cls.__dict__:
-            continue
-        setattr(cls, attribute_name, _method(attribute_name))
+    if target is not None:
+        for attribute_name in dir(target):
+            attribute = getattr(target, attribute_name)
+            if not inspect.isfunction(attribute):
+                continue
+            if attribute_name in DELEGATE_BLACKLIST:
+                continue
+            if attribute_name in cls.__dict__:
+                continue
+            setattr(cls, attribute_name, _method(attribute_name))
+
+    else:
+        if not suppress_log:
+            logger.warning(f"No target class specified for {cls.__name__}. Using dunder methods list.")
+        for attribute_name in COMMON_DUNDER_METHODS:
+            if attribute_name in cls.__dict__:
+                continue
+            setattr(cls, attribute_name, _method(attribute_name))
+
+        def _getattr(self, name: str):
+            return getattr(_get_instance(self), name)
+
+        original_getattr = getattr(cls, "__getattr__", None)
+        if original_getattr is None:
+            setattr(cls, "__getattr__", _getattr)
+        else:
+            def _fallback_getattr(self, name: str):
+                try:
+                    return original_getattr(self, name)
+                except AttributeError:
+                    return _getattr(self, name)
+
+            setattr(cls, "__getattr__", _fallback_getattr)
+    if enable_setattr:
+        def _setattr(self, name: str, value: Any):
+            try:
+                setattr(_get_instance(self), name, value)
+            except AttributeError:
+                if not suppress_log:
+                    # until at least 1 setattr is called, the instance must not exist.
+                    logger.debug(f"Unable to set attribute {name} to {value} on {self}")
+            super(cls, self).__setattr__(name, value)
+
+        setattr(cls, "__setattr__", _setattr)
 
     return cls
