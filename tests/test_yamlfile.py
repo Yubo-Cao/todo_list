@@ -6,7 +6,7 @@ from todo.model.yamlfile import YamlFile
 
 path = Path("tests/test.yaml")
 path.unlink(missing_ok=True)
-yaml = YamlFile(path)
+yaml = YamlFile(path, )
 
 
 def test_load():

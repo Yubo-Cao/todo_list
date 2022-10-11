@@ -7,7 +7,7 @@ from typing import Any, Literal, TypeVar, Optional, Union, Type
 
 from todo.log import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, use_config=False)
 
 
 def splitter(data, pred):
@@ -393,6 +393,22 @@ def singleton(cls):
 T = TypeVar("T")
 V = TypeVar("V")
 
+DELEGATE_BLACKLIST = {
+    "__class__",
+    "__delattr__",
+    "__dir__",
+    "__doc__",
+    "__getattribute__",
+    "__getattr__",
+    "__hash__",
+    "__setattr__",
+    "__setattribute__",
+    "__sizeof__",
+    "__str__",
+    "__subclasshook__",
+    "__weakref__",
+}
+
 
 def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optional[Callable[[T], V]] = None,
              name: Optional[str] = ""):
@@ -426,7 +442,7 @@ def delegate(cls: Type[T] = None, target: Type[V] = None, instance_getter: Optio
         meth = getattr(target, n)
         if not inspect.isfunction(meth):
             continue
-        if n == '__getattribute__' or n == '__getattr__':
+        if n in DELEGATE_BLACKLIST:
             continue
         if n in cls.__dict__:
             continue

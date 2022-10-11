@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar, cast
 
 from todo.log import get_logger
+from todo.utils import delegate
 
 logger = get_logger(__name__, use_config=False)
 
@@ -19,19 +20,27 @@ class Observable:
         self._value = value
         self._observers: list[Observer] = []
 
-    def attach(self, observer: Observer) -> None:
+    def attach(self, obs: list[Observer] | Observer) -> None:
         """Attach an observer to the observable"""
+        if isinstance(obs, Iterable):
+            [self.attach(o) for o in obs]
+            return
+        obs = cast(Observer, obs)
         for observer in self._observers:
-            if observer == observer:
+            if observer == obs:
                 logger.warning("Observer already attached")
                 return
-        self._observers.append(observer)
+        self._observers.append(obs)
 
-    def detach(self, observer: Observer) -> None:
+    def detach(self, obs: list[Observer] | Observer) -> None:
         """Detach an observer from the observable"""
+        if isinstance(obs, Iterable):
+            [self.detach(o) for o in obs]
+            return
+        obs = cast(Observer, obs)
         for observer in self._observers:
-            if observer == observer:
-                self._observers.remove(observer)
+            if observer == obs:
+                self._observers.remove(obs)
                 return
         raise ValueError("Observer not attached")
 
@@ -39,6 +48,10 @@ class Observable:
         """Notify all observers of a change"""
         for observer in self._observers:
             observer(value)
+
+    @property
+    def observers(self):
+        return self._observers
 
 
 class ObservableCollection(Observable, Generic[T]):
@@ -91,6 +104,9 @@ class ObservableCollection(Observable, Generic[T]):
 
     def __eq__(self, other):
         return self._data == other
+
+    def __bool__(self):
+        return bool(self._data)
 
 
 class ObservableList(ObservableCollection[list]):
@@ -238,6 +254,7 @@ class ObservableDict(ObservableCollection[dict]):
         return item in self._data
 
 
+@delegate(target=ObservableDict, name="data")
 class AttrObservableDict(ObservableCollection[dict]):
     """A decorator for an observable dict that allows to access the dict's values as attributes"""
 
@@ -258,7 +275,6 @@ class AttrObservableDict(ObservableCollection[dict]):
             super().__setattr__(key, value)
         else:
             self._data[key] = value
-            self.notify([key])
 
 
 class ObservableSet(ObservableCollection[set]):
