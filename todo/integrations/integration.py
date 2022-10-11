@@ -23,7 +23,7 @@ class Integration:
                 instance = cl._instance = super(cl, cl).__new__(cl)
             return instance
 
-        if '__new__' in cls.__dict__:
+        if "__new__" in cls.__dict__:
             logger.warning("Integration class already has __new__ method, overwriting.")
         cls.__new__ = new
 
@@ -41,7 +41,9 @@ class Integration:
         Get the configuration of the integration.
         """
 
-        return config.setdefault("integrations", {}).setdefault(self.__class__.__name__, {})
+        return config.setdefault("integrations", {}).setdefault(
+            self.__class__.__name__, {}
+        )
 
     @cached_property
     def logger(self) -> logging.Logger:
@@ -49,8 +51,11 @@ class Integration:
         Get a logger for the integration.
         """
 
-        return get_logger(self.__class__.__name__, use_config=False,
-                          log_path=log_path / f"{self.__class__.__name__}.log")
+        return get_logger(
+            self.__class__.__name__,
+            use_config=False,
+            log_path=log_path / f"{self.__class__.__name__}.log",
+        )
 
     def log(self, level: int, message: str, *args, **kwargs) -> None:
         """

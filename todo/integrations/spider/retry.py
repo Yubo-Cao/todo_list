@@ -47,10 +47,10 @@ class Retry(Spider):
         self._next_level = next_level
 
     def retry(
-            self,
-            need_retry: Any,
-            names: Optional[list[str]] = None,
-            predicate: Optional[Callable] = None,
+        self,
+        need_retry: Any,
+        names: Optional[list[str]] = None,
+        predicate: Optional[Callable] = None,
     ) -> Callable[..., Coroutine]:
         """
         Retry the operation. A decorator that can be used to retry the
@@ -66,7 +66,7 @@ class Retry(Spider):
                 raise ValueError("names and predicate should not be provided")
 
             async def _retry(
-                    *args, previous_retried_but_failed_function=None, **kwargs
+                *args, previous_retried_but_failed_function=None, **kwargs
             ):
                 try:
                     return await execute(need_retry, *args, **kwargs)
@@ -101,14 +101,21 @@ class Retry(Spider):
 
         # normalize names, predicate into predicate
         predicate = predicate or (
-            (lambda x: isfunction(x) and not (x.__name__.startswith("__") and x.__name__.endswith('__')))
+            (
+                lambda x: isfunction(x)
+                and not (x.__name__.startswith("__") and x.__name__.endswith("__"))
+            )
             if not names
             else (lambda x: x.__name__ in names)
         )
         for name in (
-                meth for meth in dir(need_retry) if predicate(fn := getattr(need_retry, meth, None))
+            meth
+            for meth in dir(need_retry)
+            if predicate(fn := getattr(need_retry, meth, None))
         ):
-            need_retry.__dict__[name] = (self.retry(fn)
-                                         if inspect.iscoroutinefunction(fn)
-                                         else sync(self.retry(fn)))
+            need_retry.__dict__[name] = (
+                self.retry(fn)
+                if inspect.iscoroutinefunction(fn)
+                else sync(self.retry(fn))
+            )
         return need_retry

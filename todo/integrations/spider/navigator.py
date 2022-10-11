@@ -17,11 +17,11 @@ class Navigator:
     _internal_placeholder = "INTERNAL_PLACEHOLDER"
 
     def __new__(
-            cls,
-            name: str = "",
-            url: URL | str = "",
-            children: Optional[list["Navigator"]] = None,
-            parent: Optional["Navigator"] = None,
+        cls,
+        name: str = "",
+        url: URL | str = "",
+        children: Optional[list["Navigator"]] = None,
+        parent: Optional["Navigator"] = None,
     ):
         if name == cls._internal_placeholder:
             return super().__new__(cls)
@@ -47,11 +47,11 @@ class Navigator:
             return super().__new__(cls)
 
     def __init__(
-            self,
-            name: str,
-            url: URL | str,
-            children: Optional[list["Navigator"]] = None,
-            parent: Optional["Navigator"] = None,
+        self,
+        name: str,
+        url: URL | str,
+        children: Optional[list["Navigator"]] = None,
+        parent: Optional["Navigator"] = None,
     ):
         """
         A class to represent a website and its children.
@@ -163,9 +163,9 @@ class Navigator:
 
     def __contains__(self, item):
         return (
-                item in self.children
-                or item in self._lookup_table
-                or any(item in child for child in self.children)
+            item in self.children
+            or item in self._lookup_table
+            or any(item in child for child in self.children)
         )
 
     def __len__(self):

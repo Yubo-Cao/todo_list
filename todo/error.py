@@ -42,7 +42,7 @@ class NeedConfigError(AppError):
     """Errors raised for the integrations. Asking for addition configurations"""
 
     def __init__(self, key, description):
-        self.msg = msg = f'Please check {key} in your config file: {description}'
+        self.msg = msg = f"Please check {key} in your config file: {description}"
         super().__init__(msg)
         self.key = key
 

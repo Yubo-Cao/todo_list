@@ -11,11 +11,15 @@ class GradeBookIntegration(Integration):
         try:
             self.username = self.config.username
         except AttributeError:
-            raise NeedConfigError(f"{self.config_path}.username", "username of the e-class account") from None
+            raise NeedConfigError(
+                f"{self.config_path}.username", "username of the e-class account"
+            ) from None
         try:
             self.password = self.config.password
         except AttributeError:
-            raise NeedConfigError(f"{self.config_path}.password", "password of the e-class account") from None
+            raise NeedConfigError(
+                f"{self.config_path}.password", "password of the e-class account"
+            ) from None
         self.manager = SessionManager("e_class")
         self.navigator = Navigator("e_class", "e_class")
 
@@ -28,7 +32,9 @@ class GradeBookIntegration(Integration):
                 self.e_class = EClass(manager, navigator, username, password)
             except SpiderError as e:
                 self.error(f"Failed to login to e-class: {e}")
-                raise NeedConfigError(f"{self.config_path}", "check the password and username")
+                raise NeedConfigError(
+                    f"{self.config_path}", "check the password and username"
+                )
 
         if not hasattr(self, "student_vue"):
             try:
@@ -39,7 +45,9 @@ class GradeBookIntegration(Integration):
 
         if not hasattr(self, "classes"):
             try:
-                self.grade_book = await GradeBook.create(manager, navigator, self.student_vue)
+                self.grade_book = await GradeBook.create(
+                    manager, navigator, self.student_vue
+                )
                 # hopefully nobody will run this program for more than a semester continuously
                 self.classes = await self.grade_book.default_classes
             except SpiderError as e:

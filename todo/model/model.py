@@ -29,11 +29,20 @@ class TodoListModel(QAbstractListModel):
             case Qt.DecorationRole:
                 img = self.todos[index.row()].photo
                 return QPixmap.fromImage(
-                    QImage(img.tobytes(), img.width, img.height, img.width * 3, QImage.Format_RGB888))
+                    QImage(
+                        img.tobytes(),
+                        img.width,
+                        img.height,
+                        img.width * 3,
+                        QImage.Format_RGB888,
+                    )
+                )
             case _:
                 return None
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
+    def headerData(
+        self, section: int, orientation: Qt.Orientation, role: int = ...
+    ) -> Any:
         if role == Qt.DisplayRole:
             return "TodoList"
         return None

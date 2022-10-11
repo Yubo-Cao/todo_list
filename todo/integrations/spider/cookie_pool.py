@@ -80,7 +80,7 @@ class CookiePool:
         """
         Dump the cookie pool.
         """
-        
+
         for idx in self._to_be_saved:
             if idx < 0:
                 (self.path / f"{-idx}.cookies").unlink()

@@ -55,14 +55,18 @@ class Observable:
 
 
 class ObservableCollection(Observable, Generic[T]):
-    def __init__(self, data: T) -> None:
+    def __init__(self, data: T | "ObservableCollection[T]") -> None:
         super().__init__(data)
         self._data = data
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         for name, meth in cls.__dict__.items():
-            if not callable(meth) or getattr(meth, '__name__', '') in {"__init__", "__new__", "__setitem__"}:
+            if not callable(meth) or getattr(meth, "__name__", "") in {
+                "__init__",
+                "__new__",
+                "__setitem__",
+            }:
                 continue
 
             setattr(cls, name, ObservableCollection._observe_wrapper(meth))
@@ -107,6 +111,25 @@ class ObservableCollection(Observable, Generic[T]):
 
     def __bool__(self):
         return bool(self._data)
+
+    @property
+    def data(self):
+        return self._data
+
+    @classmethod
+    def to_data(cls, data: "ObservableCollection[T]") -> T:
+        """
+        Recursively convert an ObservableCollection to pure data
+        """
+
+        if isinstance(data, ObservableDict):
+            return {k: cls.to_data(v) for k, v in data.items()}
+        elif isinstance(data, ObservableList):
+            return [cls.to_data(v) for v in data]
+        elif isinstance(data, ObservableSet):
+            return {cls.to_data(v) for v in data}
+        else:
+            return data
 
 
 class ObservableList(ObservableCollection[list]):
@@ -196,12 +219,6 @@ class ObservableDict(ObservableCollection[dict]):
 
     _PLACEHOLDER = object()
 
-    def __getattr__(self, item, default=_PLACEHOLDER):
-        # unimplemented methods shall not be called
-        if default is self._PLACEHOLDER:
-            raise AttributeError(f"ObservableDict has no attribute {item}")
-        return default
-
     def __setitem__(self, key: str, value):
         self._data[key] = value
         self.notify([key])
@@ -254,8 +271,7 @@ class ObservableDict(ObservableCollection[dict]):
         return item in self._data
 
 
-@delegate(target=ObservableDict, name="data")
-class AttrObservableDict(ObservableCollection[dict]):
+class AttrObservableDict(ObservableDict):
     """A decorator for an observable dict that allows to access the dict's values as attributes"""
 
     def __init__(self, data: ObservableDict):
@@ -282,14 +298,6 @@ class ObservableSet(ObservableCollection[set]):
 
     def __init__(self, data: set):
         super().__init__(data)
-
-    _PLACEHOLDER = object()
-
-    def __getattr__(self, item, default=_PLACEHOLDER):
-        # unimplemented methods shall not be called
-        if default is self._PLACEHOLDER:
-            raise AttributeError(f"ObservableSet has no attribute {item}")
-        return default
 
     def add(self, item):
         self._data.add(item)

@@ -54,10 +54,10 @@ C = TypeVar("C")
 
 class Property:
     def __init__(
-            self: C,
-            func: Callable[[C], Coroutine[None, None, Any]],
-            cached=False,
-            immutable=False,
+        self: C,
+        func: Callable[[C], Coroutine[None, None, Any]],
+        cached=False,
+        immutable=False,
     ):
         self.func = func
         self.cached = cached
@@ -100,7 +100,7 @@ class Property:
 
 
 def sync_property(
-        func: Callable[..., Coroutine] = None, **kwargs
+    func: Callable[..., Coroutine] = None, **kwargs
 ) -> Property | Callable[..., Property]:
     if func is None:
         return functools.partial(Property, **kwargs)
@@ -126,10 +126,10 @@ class ClassInstanceDispatch:
         return results
 
     def register(
-            self,
-            meth: Optional[Callable] = None,
-            *,
-            kind: Literal["class", "instance"] = "class",
+        self,
+        meth: Optional[Callable] = None,
+        *,
+        kind: Literal["class", "instance"] = "class",
     ) -> Optional[Callable]:
         """
         Register a method to be called when the decorated method is called
@@ -195,9 +195,9 @@ class ClassInstanceDispatch:
 
     @staticmethod
     def decorator_dispatch(
-            meth: Optional[Callable] = None,
-            name: str = "",
-            get_instance: Optional[Callable] = None,
+        meth: Optional[Callable] = None,
+        name: str = "",
+        get_instance: Optional[Callable] = None,
     ) -> Union[Callable[..., "ClassInstanceDispatch"], "ClassInstanceDispatch"]:
         """
         This function assumes the method provided is an instance method that decorate
@@ -211,7 +211,9 @@ class ClassInstanceDispatch:
 
         if meth is None:
             return functools.partial(
-                ClassInstanceDispatch.decorator_dispatch, name=name, get_instance=get_instance
+                ClassInstanceDispatch.decorator_dispatch,
+                name=name,
+                get_instance=get_instance,
             )
 
         if name == "" and get_instance is None:
@@ -234,11 +236,19 @@ class ClassInstanceDispatch:
         @functools.wraps(meth)
         def _impl(cl, fn, *args, **kwargs):
             if inspect.iscoroutinefunction(fn):
+
                 async def _deco(self, *fn_args, **fn_kwargs):
-                    return await meth(get_instance(self), fn, *args, **kwargs)(self, *fn_args, **fn_kwargs)
+                    return await meth(get_instance(self), fn, *args, **kwargs)(
+                        self, *fn_args, **fn_kwargs
+                    )
+
             else:
+
                 def _deco(self, *fn_args, **fn_kwargs):
-                    return meth(get_instance(self), fn, *args, **kwargs)(self, *fn_args, **fn_kwargs)
+                    return meth(get_instance(self), fn, *args, **kwargs)(
+                        self, *fn_args, **fn_kwargs
+                    )
+
             return _deco
 
         dispatcher.register(_impl, kind="class")
@@ -256,8 +266,8 @@ class ClassInstanceDispatch:
         """
 
         if (
-                inspect.ismethod(meth)
-                and (self := getattr(meth, "__self__", None)) is not None
+            inspect.ismethod(meth)
+            and (self := getattr(meth, "__self__", None)) is not None
         ):
             return self
         sign = inspect.signature(meth)
@@ -351,7 +361,9 @@ def isfunction(fn: Any) -> bool:
     :return: True if the object is a function, False otherwise
     """
 
-    return inspect.isfunction(fn) or inspect.ismethod(fn) or inspect.ismethoddescriptor(fn)
+    return (
+        inspect.isfunction(fn) or inspect.ismethod(fn) or inspect.ismethoddescriptor(fn)
+    )
 
 
 def get_functions(fn: Any) -> list[Callable]:
@@ -443,8 +455,14 @@ COMMON_DUNDER_METHODS = {
 }
 
 
-def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_getter: Optional[Callable[[T], V]] = None,
-             instance_name: Optional[str] = "", suppress_log: bool = False, enable_setattr: bool = False):
+def delegate(
+    cls: Type[T] = None,
+    target: Optional[Type[V]] = None,
+    instance_getter: Optional[Callable[[T], V]] = None,
+    instance_name: Optional[str] = "",
+    suppress_log: bool = False,
+    enable_setattr: bool = False,
+):
     """
     Composition & delegate.
 
@@ -458,19 +476,28 @@ def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_get
     """
 
     if cls is None:
-        return functools.partial(delegate, target=target, instance_getter=instance_getter, instance_name=instance_name,
-                                 suppress_log=suppress_log, enable_setattr=enable_setattr)
+        return functools.partial(
+            delegate,
+            target=target,
+            instance_getter=instance_getter,
+            instance_name=instance_name,
+            suppress_log=suppress_log,
+            enable_setattr=enable_setattr,
+        )
 
     if instance_name == "":
         instance_name = target.__name__.lower()
     if instance_getter is None:
+
         def instance_getter(self):
             return getattr(self, instance_name)
 
     def _get_instance(self):
         instance = instance_getter(self)
         if instance is None:
-            raise AttributeError(f"{self} does not hold an instance of {target}.") from None
+            raise AttributeError(
+                f"{self} does not hold an instance of {target}."
+            ) from None
         return instance
 
     def _method(method_name: str):
@@ -478,7 +505,9 @@ def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_get
             try:
                 method: Callable = getattr(_get_instance(self), method_name)
             except AttributeError:
-                raise AttributeError(f"{cls.__name__} has no attribute {method_name}") from None
+                raise AttributeError(
+                    f"{cls.__name__} has no attribute {method_name}"
+                ) from None
             return method(*args, **kwargs)
 
         return _call
@@ -496,7 +525,9 @@ def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_get
 
     else:
         if not suppress_log:
-            logger.warning(f"No target class specified for {cls.__name__}. Using dunder methods list.")
+            logger.warning(
+                f"No target class specified for {cls.__name__}. Using dunder methods list."
+            )
         for attribute_name in COMMON_DUNDER_METHODS:
             if attribute_name in cls.__dict__:
                 continue
@@ -509,6 +540,7 @@ def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_get
         if original_getattr is None:
             setattr(cls, "__getattr__", _getattr)
         else:
+
             def _fallback_getattr(self, name: str):
                 try:
                     return original_getattr(self, name)
@@ -517,6 +549,7 @@ def delegate(cls: Type[T] = None, target: Optional[Type[V]] = None, instance_get
 
             setattr(cls, "__getattr__", _fallback_getattr)
     if enable_setattr:
+
         def _setattr(self, name: str, value: Any):
             try:
                 setattr(_get_instance(self), name, value)
