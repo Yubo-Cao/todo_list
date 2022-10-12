@@ -1,14 +1,16 @@
+from typing import Optional
+
 import pytest
 
 from todo.model import ObservableList
-from todo.model.observables import ObservableDict, AttrObservableDict
+from todo.model.observables import ObservableDict, AttrObservableDict, ObservableCollection
 
 
 def test_observable_list():
     changes = []
 
-    def callback(idx):
-        changes.append(idx)
+    def callback(idx: tuple[list[int], Optional[ObservableCollection]]):
+        changes.append(idx[0])
 
     ol = ObservableList([])
     ol.attach(callback)
@@ -36,8 +38,8 @@ def test_observable_list():
 def test_observable_list_methods():
     changes = []
 
-    def callback(idx):
-        changes.append(idx)
+    def callback(idx: tuple[list[int], Optional[ObservableCollection]]):
+        changes.append(idx[0])
 
     l1 = ObservableList([1, 2, 3])
     l2 = ObservableList([3, 2, 1])
@@ -56,8 +58,9 @@ def test_observable_dict():
     dct = ObservableDict({"a": 1, "b": 2})
     changes = []
 
-    def callback(idx):
-        changes.append(idx)
+    def callback(idx: tuple[list[int], Optional[ObservableCollection]]):
+        [1] is None
+        changes.append(idx[0])
 
     dct.attach(callback)
     dct["c"] = 3
@@ -79,8 +82,8 @@ def test_attr_dct():
     dct = ObservableDict({"a": 1, "b": 2})
     changes = []
 
-    def callback(idx):
-        changes.append(idx)
+    def callback(idx: tuple[list[int], Optional[ObservableCollection]]):
+        changes.append(idx[0])
 
     dct.attach(callback)
     dct.a = 3
@@ -93,4 +96,18 @@ def test_attr_dct():
     assert changes == [["a"]]
     assert dct.a == 4
     assert dct["a"] == 4
-    assert dct == {"a": 4, "b": 2} # __eq__ is implemented
+    assert dct == {"a": 4, "b": 2}  # __eq__ is implemented
+
+
+def test_nested():
+    dct = ObservableDict({"a": 1, "b": {"c": 2}})
+    changes = []
+
+    def callback(idx: tuple[list[int], Optional[ObservableCollection]]):
+        changes.append(idx)
+
+    dct.attach(callback)
+    dct = AttrObservableDict(dct)
+    assert dct.b.c == 2
+    dct.b.c = 3
+    assert changes == [(["c"], dct.b)]

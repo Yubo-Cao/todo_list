@@ -460,7 +460,7 @@ def delegate(
         target: Optional[Type[V]] = None,
         instance_getter: Optional[Callable[[T], V]] = None,
         instance_name: Optional[str] = "",
-        suppress_log: bool = False,
+        suppress: bool = False,
         enable_setattr: bool = False,
 ):
     """
@@ -470,7 +470,7 @@ def delegate(
     :param target: the target class
     :param instance_getter: the function to get the instance of V
     :param instance_name: the name of the instance
-    :param suppress_log: suppress the warning if target is not provided
+    :param suppress: suppress the warning if target is not provided
     :param enable_setattr: enable __setattr__
     :return: the decorated class
     """
@@ -481,7 +481,7 @@ def delegate(
             target=target,
             instance_getter=instance_getter,
             instance_name=instance_name,
-            suppress_log=suppress_log,
+            suppress=suppress,
             enable_setattr=enable_setattr,
         )
 
@@ -523,7 +523,7 @@ def delegate(
             setattr(cls, attribute_name, _method(attribute_name))
 
     else:
-        if not suppress_log:
+        if not suppress:
             warnings.warn(
                 f"No target class specified for {cls.__name__}. Using dunder methods list."
             )
@@ -553,7 +553,7 @@ def delegate(
             try:
                 setattr(_get_instance(self), name, value)
             except AttributeError:
-                if not suppress_log:
+                if not suppress:
                     # until at least 1 setattr is called, the instance must not exist.
                     logger.debug(f"Unable to set attribute {name} to {value} on {self}")
             super(cls, self).__setattr__(name, value)

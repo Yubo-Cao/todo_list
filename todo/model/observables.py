@@ -1,7 +1,7 @@
 import functools
 import warnings
-from collections.abc import Iterable
-from typing import Any, Generic, Protocol, TypeVar, cast
+from collections.abc import Iterable, Callable
+from typing import Any, Generic, Protocol, TypeVar, cast, Optional
 
 from todo.log import get_logger
 from todo.utils import delegate
@@ -12,7 +12,7 @@ T = TypeVar("T")
 
 
 class Observer(Protocol):
-    def __call__(self, value: Any) -> None:
+    def __call__(self, index: Any) -> None:
         """Called when the observed object changes"""
 
 
@@ -56,12 +56,13 @@ class Observable:
 
 
 class ObservableCollection(Observable, Generic[T]):
-    def __init__(self, data: T | "ObservableCollection[T]") -> None:
+    def __init__(self, data: T | "ObservableCollection[T]", parent: Optional["ObservableCollection"] = None) -> None:
         super().__init__(data)
         self._data = data
+        self._parent = parent
 
     def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
+        super().__init_subclass__()
         for name, meth in cls.__dict__.items():
             if not callable(meth) or getattr(meth, "__name__", "") in {
                 "__init__",
@@ -69,34 +70,49 @@ class ObservableCollection(Observable, Generic[T]):
                 "__setitem__",
             }:
                 continue
-
-            setattr(cls, name, ObservableCollection._observe_wrapper(meth))
+            wrapper: Callable[[Callable], Callable] = kwargs.get("wrapper", ObservableCollection._observe_wrapper)
+            setattr(cls, name, wrapper(meth))
         return cls
+
+    def notify(self, index: Any) -> None:
+        """Notify all observers of a change. Collection call observer with index"""
+        if not (isinstance(index, tuple) and len(index) == 2):
+            index = (self._normalize_key(index), self)
+        super().notify(index)
+        if self._parent:
+            self._parent.notify(index)
 
     @classmethod
     def _observe_wrapper(cls, fn):
         @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
-            return observable(fn(*args, **kwargs))
+        def wrapper(self, *args, **kwargs):
+            obs = observable(fn(self, *args, **kwargs))
+            if isinstance(obs, ObservableCollection):
+                obs._parent = self
+            return obs
 
         return wrapper
 
+    T = TypeVar("T")
+
     @classmethod
-    def _normalize_key(cls, index: int | slice) -> list[int]:
+    def _normalize_key(cls, index: int | slice | T) -> list[int | T]:
+        if isinstance(index, list):
+            return index
         if isinstance(index, slice):
             return list(range(index.start or 0, index.stop or 0, index.step or 1))
         return [index]
 
     def __setitem__(self, key, item):
         self._data[key] = item
-        self.notify(self._normalize_key(key))
+        self.notify(key)
 
     def __getitem__(self, key):
         return self._data[key]
 
     def __delitem__(self, key):
         del self._data[key]
-        self.notify(self._normalize_key(key))
+        self.notify(key)
 
     def __contains__(self, key):
         return key in self._data
@@ -148,19 +164,19 @@ class ObservableList(ObservableCollection[list]):
 
     def append(self, item):
         self._data.append(item)
-        self.notify([len(self._data) - 1])
+        self.notify(len(self._data) - 1)
 
     def remove(self, target):
         for idx, item in enumerate(self._data):
             if item == target:
                 self._data.pop(idx)
-                self.notify([idx])
+                self.notify(idx)
                 return
         raise ValueError(f"Item {target} not found in list")
 
     def pop(self, idx: int):
         self._data.pop(idx)
-        self.notify([idx])
+        self.notify(idx)
 
     def extend(self, iterable):
         it = list(iterable)
@@ -182,7 +198,7 @@ class ObservableList(ObservableCollection[list]):
 
     def insert(self, idx: int, item):
         self._data.insert(idx, item)
-        self.notify([idx])
+        self.notify(idx)
 
     def __add__(self, other):
         return self._data + other
@@ -238,15 +254,54 @@ class ObservableDict(ObservableCollection[dict]):
         return self._data.items()
 
 
-@delegate(instance_name="_data")
+def _attr_dict_wrapper(fn):
+    """Wrap a function that returns an ObservableDict to make it an AttrObservableDict"""
+
+    def _wrapper(self, *args, **kwargs):
+        obs = observable(fn(self, *args, **kwargs))
+        if isinstance(obs, ObservableCollection):
+            obs._parent = self
+        if isinstance(obs, ObservableDict):
+            return AttrObservableDict(obs)
+        return obs
+
+    return _wrapper
+
+
+def _attr_dict_cls(cls):
+    """Wrap a class that returns an ObservableDict to make it an AttrObservableDict"""
+
+    for name, fn in cls.__dict__.items():
+        if name in ("__init__", "__new__", "__getattr__", "__setattr__", "__setitem__", "__delitem__") or not callable(
+                fn):
+            continue
+        setattr(cls, name, _attr_dict_wrapper(fn))
+    _getattr = getattr(cls, "__getattr__", None)
+    if _getattr is not None:
+        def _wrapped_getattr(self, name):
+            result = _getattr(self, name)
+            if callable(result):
+                return _attr_dict_wrapper(result)
+            obs = observable(result)
+            if isinstance(obs, ObservableCollection):
+                obs._parent = self
+            if isinstance(obs, ObservableDict):
+                return AttrObservableDict(obs)
+            return obs
+
+        setattr(cls, "__getattr__", _wrapped_getattr)
+    return cls
+
+
+@_attr_dict_cls
+@delegate(instance_name="_data", suppress=True)
 class AttrObservableDict:
     """A decorator for an observable dict that allows to access the dict's values as attributes"""
 
     def __init__(self, data: ObservableDict):
-        dct = self.__dict__
         if not isinstance(data, ObservableDict):
             raise TypeError("data must be an ObservableDict")
-        dct["_data"] = data
+        self._data = data
 
     def __getattr__(self, item):
         try:
@@ -255,7 +310,10 @@ class AttrObservableDict:
             raise AttributeError(f"{self.__class__} has no attribute {item}")
 
     def __setattr__(self, key, value):
-        self._data[key] = value
+        if key.startswith("_"):
+            super().__setattr__(key, value)
+        else:
+            self._data[key] = value
 
 
 class ObservableSet(ObservableCollection[set]):
@@ -289,6 +347,15 @@ class ObservableSet(ObservableCollection[set]):
     def update(self, other: set):
         self._data.update(other)
         self.notify(list(other))
+
+    def __getitem__(self, item):
+        raise TypeError("ObservableSet does not support indexing")
+
+    def __delitem__(self, key):
+        raise TypeError("ObservableSet does not support indexing")
+
+    def __setitem__(self, key, value):
+        raise TypeError("ObservableSet does not support indexing")
 
     def __ior__(self, other):
         self.update(other)
