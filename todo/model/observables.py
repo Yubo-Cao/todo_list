@@ -342,6 +342,9 @@ class AttributeObservable:
             self._data[key] = value
 
 
+AttributeObservable = cast(ObservableCollection, AttributeObservable)
+
+
 class ObservableSet(ObservableCollection[set]):
     """Represents an observable set"""
 
