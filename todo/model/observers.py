@@ -84,25 +84,23 @@ class YamlFileObserver(Observer):
         except IOError as e:
             raise YamlFileError(f"Unknown IOError {e!r} during loading", self.path) from e
 
-    def dump(self: "YamlFileObserver", val) -> None:
+    def dump(self: "YamlFileObserver", val: ObservableCollection) -> None:
         """
         Dump the data to the file.
         """
-
-        value: ObservableCollection = val[1]
 
         try:
             path = self.path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(
-                dump(value.root.to_data(), Dumper=Dumper),
+                dump(val.root.to_data(), Dumper=Dumper),
                 encoding="utf-8",
             )
         except IOError as e:
             raise YamlFileError(f"Unknown IOError {e!r} during dumping", self.path) from e
 
     def __call__(self, val):
-        self.dump(val)
+        self.dump(val[0])
 
     def __repr__(self):
         return f"{self.__class__.__name__}(path={self.path!r})"''
