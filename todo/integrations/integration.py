@@ -5,7 +5,7 @@ from abc import abstractmethod
 from functools import cached_property
 
 from todo.log import get_logger
-from todo.model import config, Config
+from todo.model import config
 from todo.globals import log_path
 
 logger = get_logger(__name__, use_config=False, log_path=log_path / "integration.log")
@@ -37,7 +37,7 @@ class Integration:
         return f"integrations.{self.__class__.__name__}"
 
     @cached_property
-    def config(self) -> Config:
+    def config(self):
         """
         Get the configuration of the integration.
         """

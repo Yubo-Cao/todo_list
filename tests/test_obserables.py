@@ -10,6 +10,7 @@ def test_observe_wrap():
     assert (parent := observable(data)) == ObservableDict({})
     assert observable([], parent).parent == parent
 
+
 def test_observable_list():
     changes = []
 

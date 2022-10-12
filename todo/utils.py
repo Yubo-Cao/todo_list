@@ -541,8 +541,6 @@ def delegate(
     for attribute_name in stub_methods:
         setattr(cls, attribute_name, _method(attribute_name))
 
-    print(stub_methods)
-
     def _getattr(self, name: str):
         return getattr(_get_instance(self), name)
 
