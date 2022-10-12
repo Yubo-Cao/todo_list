@@ -163,7 +163,9 @@ class ObservableList(ObservableCollection[list]):
     Represent an observable list.
     """
 
-    def __init__(self, data: list, parent: Optional[ObservableCollection] = None):
+    def __init__(self, data: list = None, parent: Optional[ObservableCollection] = None):
+        if data is None:
+            data = []
         super().__init__(data, parent)
 
     _PLACEHOLDER = object()
@@ -219,7 +221,9 @@ class ObservableList(ObservableCollection[list]):
 class ObservableDict(ObservableCollection[dict]):
     """Represents an observable dict"""
 
-    def __init__(self, data: dict, parent: Optional[ObservableCollection] = None):
+    def __init__(self, data: dict = None, parent: Optional[ObservableCollection] = None):
+        if data is None:
+            data = {}
         super().__init__(data, parent)
 
     _PLACEHOLDER = object()
@@ -341,7 +345,9 @@ class AttributeObservable:
 class ObservableSet(ObservableCollection[set]):
     """Represents an observable set"""
 
-    def __init__(self, data: set, parent: Optional[ObservableCollection] = None):
+    def __init__(self, data: set = None, parent: Optional[ObservableCollection] = None):
+        if data is None:
+            data = set()
         super().__init__(data, parent)
 
     def add(self, item):
@@ -406,7 +412,7 @@ class ObservableSet(ObservableCollection[set]):
 class ObservableTuple(ObservableCollection[tuple]):
     """Represents an observable tuple"""
 
-    def __init__(self, data: tuple, parent: Optional[ObservableCollection] = None):
+    def __init__(self, data: tuple = tuple(), parent: Optional[ObservableCollection] = None):
         super().__init__(data, parent)
 
     def __add__(self, other):
