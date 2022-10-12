@@ -41,7 +41,7 @@ class TodoListModel(QAbstractListModel):
                 return None
 
     def headerData(
-        self, section: int, orientation: Qt.Orientation, role: int = ...
+            self, section: int, orientation: Qt.Orientation, role: int = ...
     ) -> Any:
         if role == Qt.DisplayRole:
             return "TodoList"
@@ -64,8 +64,9 @@ class TodoListModel(QAbstractListModel):
             return Qt.ItemIsEnabled
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
-    def on_change_handler(self, indices: list[int]):
+    def on_change_handler(self, value):
         """Called when the todo_list changes"""
+        indices = value[0]
         self.dataChanged.emit(self.index(indices[0]), self.index(indices[-1]))
         self.layoutChanged.emit()
 
