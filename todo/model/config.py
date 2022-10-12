@@ -1,3 +1,4 @@
+import warnings
 from functools import cached_property
 
 from todo.globals import config_path, data_path, cache_path, log_path
@@ -9,7 +10,7 @@ from todo.utils import delegate
 logger = get_logger(__name__, use_config=False)
 
 
-@delegate(target=ObservableDict, name="data")
+@delegate(instance_name="data", suppress_log=True)
 class Config:
     DEFAULT_CONFIG_PATH = config_path / "config.yaml"
 
@@ -20,7 +21,7 @@ class Config:
         logger.debug(f"Using config path {path}.")
         self.data = YamlFile(data=ObservableDict({}), path=path)
         if self.data == {}:
-            logger.warning("Config file is empty. Using default values.")
+            logger.info("Config file is empty. Using default values.")
             self.data.update(self.default_config)
 
     @cached_property

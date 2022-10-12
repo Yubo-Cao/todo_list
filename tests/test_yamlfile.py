@@ -2,7 +2,7 @@ from pathlib import Path
 
 from yaml import load, Loader
 
-from todo.model.observables import ObservableDict
+from todo.model.observables import ObservableDict, AttrObservableDict
 from todo.model.yamlfile import YamlFile
 
 path = Path("tests/test.yaml")
@@ -32,7 +32,7 @@ def test_nested():
 def test_iter():
     yaml.test = [{"a": "b"}, {"c": "d"}]
     for item in yaml.test:
-        assert isinstance(item, ObservableDict)
+        assert isinstance(item, AttrObservableDict)
 
 
 def test_fn():

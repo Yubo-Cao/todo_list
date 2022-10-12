@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from collections.abc import Callable
 from typing import Coroutine, Optional, Any, Literal
 
@@ -25,7 +26,7 @@ class Retry(Spider):
         for name in ["visit", "login", "retry"]:
             if (method := getattr(cls, name, ...)) is not ...:
                 if getattr(cls, "_retry_method", ...) is not ...:
-                    logger.warning("Retry method already defined, overwriting.")
+                    warnings.warn("Retry method already defined, overwriting.")
 
                 cls._retry_methods.append(method)
                 break

@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import inspect
+import warnings
 from collections.abc import Callable, Coroutine
 from threading import Thread
 from typing import Any, Literal, TypeVar, Optional, Union, Type
@@ -54,10 +55,10 @@ C = TypeVar("C")
 
 class Property:
     def __init__(
-        self: C,
-        func: Callable[[C], Coroutine[None, None, Any]],
-        cached=False,
-        immutable=False,
+            self: C,
+            func: Callable[[C], Coroutine[None, None, Any]],
+            cached=False,
+            immutable=False,
     ):
         self.func = func
         self.cached = cached
@@ -100,7 +101,7 @@ class Property:
 
 
 def sync_property(
-    func: Callable[..., Coroutine] = None, **kwargs
+        func: Callable[..., Coroutine] = None, **kwargs
 ) -> Property | Callable[..., Property]:
     if func is None:
         return functools.partial(Property, **kwargs)
@@ -126,10 +127,10 @@ class ClassInstanceDispatch:
         return results
 
     def register(
-        self,
-        meth: Optional[Callable] = None,
-        *,
-        kind: Literal["class", "instance"] = "class",
+            self,
+            meth: Optional[Callable] = None,
+            *,
+            kind: Literal["class", "instance"] = "class",
     ) -> Optional[Callable]:
         """
         Register a method to be called when the decorated method is called
@@ -195,9 +196,9 @@ class ClassInstanceDispatch:
 
     @staticmethod
     def decorator_dispatch(
-        meth: Optional[Callable] = None,
-        name: str = "",
-        get_instance: Optional[Callable] = None,
+            meth: Optional[Callable] = None,
+            name: str = "",
+            get_instance: Optional[Callable] = None,
     ) -> Union[Callable[..., "ClassInstanceDispatch"], "ClassInstanceDispatch"]:
         """
         This function assumes the method provided is an instance method that decorate
@@ -217,7 +218,7 @@ class ClassInstanceDispatch:
             )
 
         if name == "" and get_instance is None:
-            logger.warning(
+            warnings.warn(
                 f"No name nor get_instance provided for decorator dispatch, assuming {meth.__name__}"
             )
             name = meth.__name__
@@ -266,8 +267,8 @@ class ClassInstanceDispatch:
         """
 
         if (
-            inspect.ismethod(meth)
-            and (self := getattr(meth, "__self__", None)) is not None
+                inspect.ismethod(meth)
+                and (self := getattr(meth, "__self__", None)) is not None
         ):
             return self
         sign = inspect.signature(meth)
@@ -280,7 +281,7 @@ class ClassInstanceDispatch:
         try:
             ba = sign.bind(*args, **kwargs)
         except ValueError:
-            logger.warning("Incomplete parameters. Fallback to bind_partial.")
+            warnings.warn("Incomplete parameters. Fallback to bind_partial.")
             try:
                 ba = sign.bind_partial(*args, **kwargs)
             except ValueError:
@@ -362,7 +363,7 @@ def isfunction(fn: Any) -> bool:
     """
 
     return (
-        inspect.isfunction(fn) or inspect.ismethod(fn) or inspect.ismethoddescriptor(fn)
+            inspect.isfunction(fn) or inspect.ismethod(fn) or inspect.ismethoddescriptor(fn)
     )
 
 
@@ -379,8 +380,7 @@ def get_functions(fn: Any) -> list[Callable]:
     for name in ["__func__", "__funcs__", "__function__", "__functions__", "__call__"]:
         if (f := getattr(fn, name, None)) is not None:
             return get_functions(f)
-    logger.warning(f"Unable to get functions from {fn}")
-    return []
+    raise ValueError(f"Unable to get functions from {fn}")
 
 
 def singleton(cls):
@@ -456,12 +456,12 @@ COMMON_DUNDER_METHODS = {
 
 
 def delegate(
-    cls: Type[T] = None,
-    target: Optional[Type[V]] = None,
-    instance_getter: Optional[Callable[[T], V]] = None,
-    instance_name: Optional[str] = "",
-    suppress_log: bool = False,
-    enable_setattr: bool = False,
+        cls: Type[T] = None,
+        target: Optional[Type[V]] = None,
+        instance_getter: Optional[Callable[[T], V]] = None,
+        instance_name: Optional[str] = "",
+        suppress_log: bool = False,
+        enable_setattr: bool = False,
 ):
     """
     Composition & delegate.
@@ -488,7 +488,6 @@ def delegate(
     if instance_name == "":
         instance_name = target.__name__.lower()
     if instance_getter is None:
-
         def instance_getter(self):
             return getattr(self, instance_name)
 
@@ -496,7 +495,7 @@ def delegate(
         instance = instance_getter(self)
         if instance is None:
             raise AttributeError(
-                f"{self} does not hold an instance of {target}."
+                f"{cls.__name__} does not hold an instance of composed object."
             ) from None
         return instance
 

@@ -16,24 +16,19 @@ from todo.model.observables import (
     ObservableDict,
     observable,
     ObservableCollection,
-    ObservableList,
-    ObservableSet,
-    AttrObservableDict,
+    AttrObservableDict, observable,
 )
 from todo.utils import delegate
 
 logger = get_logger(__name__, use_config=False)
 
 
-@delegate(target=ObservableSet, name="_data")
-@delegate(target=ObservableList, name="_data")
-@delegate(target=ObservableDict, name="_data")
-@delegate(target=ObservableCollection, name="_data")
+@delegate(instance_name="_data", suppress_log=True, enable_setattr=True)
 class YamlFile:
     def __init__(
-        self,
-        data: ObservableCollection | Callable[[], ObservableCollection],
-        path: Path | str,
+            self,
+            data: ObservableCollection | Callable[[], ObservableCollection],
+            path: Path | str,
     ):
         """
         Provide serialization support for observable collections. If the file does
@@ -57,19 +52,6 @@ class YamlFile:
 
     def __str__(self):
         return str(self._data)
-
-    def __getattr__(self, name):
-        data = self.__dict__.get("_data")
-        if data is None:
-            raise AttributeError(
-                f"{self.__class__.__name__!r} object has no attribute {name!r}"
-            )
-        try:
-            return self._observable_wrapper(data[name])
-        except (KeyError, TypeError):
-            raise AttributeError(
-                f"{self.__class__!r} object has no attribute {name!r}"
-            ) from None
 
     def __setattr__(self, key, value):
         if key in self.__dict__:
@@ -101,7 +83,6 @@ class YamlFile:
         Load the data. If the data is empty, create a file and save as specified
         in the default_data.
         """
-
         dct = self.__dict__
         try:
             dct["_data"] = self._observable_wrapper(

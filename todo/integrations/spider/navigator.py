@@ -1,4 +1,5 @@
 import re
+import warnings
 from functools import cached_property
 from typing import Optional
 
@@ -138,7 +139,7 @@ class Navigator:
     def __setitem__(self, key, value):
         nav = Navigator(key, value, parent=self)
         if (old := self._lookup_table.get(key)) is not None:
-            logger.warning(f"Navigator {key} already exists. Old is overwritten.")
+            warnings.warn(f"Navigator {key} already exists. Old is overwritten.")
             self.children.remove(old)
         self.children.append(nav)
         self._refresh()

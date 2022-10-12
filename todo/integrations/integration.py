@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import warnings
 from abc import abstractmethod
 from functools import cached_property
 
@@ -24,7 +25,7 @@ class Integration:
             return instance
 
         if "__new__" in cls.__dict__:
-            logger.warning("Integration class already has __new__ method, overwriting.")
+            warnings.warn("Integration class already has __new__ method, overwriting.")
         cls.__new__ = new
 
     @property

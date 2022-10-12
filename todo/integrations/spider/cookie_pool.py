@@ -1,4 +1,5 @@
 import shutil
+import warnings
 from functools import cached_property
 from typing import Optional
 
@@ -29,7 +30,7 @@ class CookiePool:
         :return: cookie jar
         """
         if len(self) == 0:
-            logger.warning("Cookie pool is empty.")
+            warnings.warn("Cookie pool is empty.")
             return None
         if self._cookie_index >= len(self.cookies):
             logger.info("Cookie pool exhausted, refreshing.")

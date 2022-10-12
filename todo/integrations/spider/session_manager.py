@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from collections.abc import Callable, Coroutine
 from typing import Optional
 
@@ -93,7 +94,7 @@ class SessionManager:
             ba = sign.bind_partial(*args, **kwargs)
             ba.apply_defaults()
             if "session" in ba.arguments and ba.arguments["session"] is not None:
-                logger.warning("The function already has a parameter named 'session'.")
+                warnings.warn("The function already has a parameter named 'session'.")
             ba.arguments["session"] = await self.session()
             return await fn(*ba.args, **ba.kwargs)
 

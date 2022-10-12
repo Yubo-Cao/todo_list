@@ -1,9 +1,9 @@
 import functools
+import warnings
 from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar, cast
 
 from todo.log import get_logger
-from todo.utils import delegate
 
 logger = get_logger(__name__, use_config=False)
 
@@ -28,7 +28,7 @@ class Observable:
         obs = cast(Observer, obs)
         for observer in self._observers:
             if observer == obs:
-                logger.warning("Observer already attached")
+                warnings.warn("Observer already attached")
                 return
         self._observers.append(obs)
 
@@ -76,29 +76,32 @@ class ObservableCollection(Observable, Generic[T]):
     def _observe_wrapper(cls, fn):
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
-            return wrap_observable(fn(*args, **kwargs))
+            return observable(fn(*args, **kwargs))
 
         return wrapper
 
+    @classmethod
+    def _normalize_key(cls, index: int | slice) -> list[int]:
+        if isinstance(index, slice):
+            return list(range(index.start or 0, index.stop or 0, index.step or 1))
+        return [index]
+
     def __setitem__(self, key, item):
         self._data[key] = item
-        self.notify([key])
+        self.notify([self._normalize_key(key)])
 
     def __getitem__(self, key):
         return self._data[key]
 
     def __delitem__(self, key):
         del self._data[key]
-        self.notify([key])
+        self.notify([self._normalize_key(key)])
 
     def __contains__(self, key):
         return key in self._data
 
     def __len__(self):
         return len(self._data)
-
-    def __iter__(self):
-        return iter(self._data)
 
     def __repr__(self):
         return f"{type(self).__name__}({self._data!r})"
@@ -146,28 +149,13 @@ class ObservableList(ObservableCollection[list]):
         self._data.append(item)
         self.notify([len(self._data) - 1])
 
-    def remove(self, trgt):
+    def remove(self, item):
         for idx, item in enumerate(self._data):
-            if item == trgt:
+            if item == item:
                 self._data.pop(idx)
                 self.notify([idx])
                 return
-        raise ValueError(f"Item {trgt} not found in list")
-
-    def __setitem__(self, key: int | slice, value):
-        self._data[key] = value
-
-        match key:
-            case int():
-                self.notify([key])
-            case slice():
-                self.notify(list(range(key.start, key.stop, key.step)))
-
-    def __getitem__(self, key: int | slice):
-        return self._data[key]
-
-    def __iter__(self):
-        return iter(self._data)
+        raise ValueError(f"Item {item} not found in list")
 
     def pop(self, idx: int):
         self._data.pop(idx)
@@ -195,20 +183,11 @@ class ObservableList(ObservableCollection[list]):
         self._data.insert(idx, item)
         self.notify([idx])
 
-    def __eq__(self, other):
-        return self._data == other
-
     def __add__(self, other):
         return self._data + other
 
     def __mul__(self, other):
         return self._data * other
-
-    def __len__(self):
-        return len(self._data)
-
-    def __contains__(self, item):
-        return item in self._data
 
 
 class ObservableDict(ObservableCollection[dict]):
@@ -219,16 +198,16 @@ class ObservableDict(ObservableCollection[dict]):
 
     _PLACEHOLDER = object()
 
-    def __setitem__(self, key: str, value):
-        self._data[key] = value
-        self.notify([key])
+    def get(self, key: str, default=None):
+        return self._data.get(key, default)
 
-    def __getitem__(self, key: str):
-        return self._data[key]
-
-    def __delitem__(self, key: str):
-        self._data.pop(key)
-        self.notify([key])
+    def setdefault(self, key: str, default=None):
+        # can't in 1 lookup because of notify
+        if (result := self._data.get(key, self._PLACEHOLDER)) is self._PLACEHOLDER:
+            self._data[key] = default
+            self.notify([key])
+            return default
+        return result
 
     def pop(self, key: str):
         self._data.pop(key)
@@ -243,10 +222,6 @@ class ObservableDict(ObservableCollection[dict]):
         self._data.update(other)
         self.notify(list(other.keys()))
 
-    def setdefault(self, key: str, default=None):
-        self._data.setdefault(key, default)
-        self.notify([key])
-
     def popitem(self):
         key, value = self._data.popitem()
         self.notify([key])
@@ -260,15 +235,6 @@ class ObservableDict(ObservableCollection[dict]):
 
     def items(self):
         return self._data.items()
-
-    def __iter__(self):
-        return iter(self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __contains__(self, item):
-        return item in self._data
 
 
 class AttrObservableDict(ObservableDict):
@@ -325,19 +291,48 @@ class ObservableSet(ObservableCollection[set]):
         self._data.update(other)
         self.notify(list(other))
 
-    def __iter__(self):
-        return iter(self._data)
+    def __ior__(self, other):
+        self.update(other)
+        self.notify(list(other))
+        return self
 
-    def __len__(self):
-        return len(self._data)
+    def __or__(self, other):
+        if isinstance(other, ObservableSet):
+            other = other.data
+        return self._data | other
 
-    def __contains__(self, item):
-        return item in self._data
+    def __and__(self, other):
+        if isinstance(other, ObservableSet):
+            other = other.data
+        return self._data & other
+
+    def __iand__(self, other):
+        self._data &= other
+        self.notify(list(other))
+        return self
 
 
-def observable(data) -> Observable:
-    """Returns an observable version of data"""
-    if isinstance(data, Observable):
+class ObservableTuple(ObservableCollection[tuple]):
+    """Represents an observable tuple"""
+
+    def __init__(self, data: tuple):
+        super().__init__(data)
+
+    def __add__(self, other):
+        return self._data + other
+
+    def __mul__(self, other):
+        return self._data * other
+
+
+def observable(data, warning: bool = False) -> Any:
+    """
+    Make sure data is observed, as much as possible
+    :param data: the data to observe
+    :param warning: if True, a warning will be raised if the data is not observed
+    """
+
+    if not isinstance(data, Iterable) or isinstance(data, str | bytes) or isinstance(data, Observable):
         return data
     match data:
         case list():
@@ -346,25 +341,9 @@ def observable(data) -> Observable:
             return ObservableDict(data)
         case set():
             return ObservableSet(data)
-        case _:
-            raise TypeError(f"Cannot make {type(data)} observable")
-
-
-def wrap_observable(data) -> Any:
-    """Make sure data is observed, as much as possible"""
-
-    if not isinstance(data, Iterable) or isinstance(data, str | bytes):
-        return data
-    if isinstance(data, Observable):
-        return data
-    match data:
-        case list():
-            return ObservableList(data)
-        case dict():
-            return AttrObservableDict(ObservableDict(data))
-        case set():
-            return ObservableSet(data)
         case tuple():
-            return tuple(wrap_observable(item) for item in data)
+            return ObservableTuple(data)
         case _:
+            if warning:
+                warnings.warn(f"Data {data} is not observed")
             return data

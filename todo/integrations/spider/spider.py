@@ -1,5 +1,6 @@
 import functools
 import inspect
+import warnings
 from collections.abc import Callable, Iterable
 
 from todo.log import get_logger
@@ -33,7 +34,7 @@ class Spider:
             hooks.extend(methods)
 
         if (fn := cls.__dict__.get("create")) is not None and fn is not Spider.create:
-            logger.warning(f"Class {cls.__name__} already has a method named 'create'.")
+            warnings.warn(f"Class {cls.__name__} already has a method named 'create'.")
             hooks.append(fn)
         for name in ["visit", "login", "load_nav"]:
             if (fn := getattr(cls, name, None)) is not None:
