@@ -524,7 +524,7 @@ def delegate(
 
     else:
         if not suppress_log:
-            logger.warning(
+            warnings.warn(
                 f"No target class specified for {cls.__name__}. Using dunder methods list."
             )
         for attribute_name in COMMON_DUNDER_METHODS:

@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar, cast
 
 from todo.log import get_logger
+from todo.utils import delegate
 
 logger = get_logger(__name__, use_config=False)
 
@@ -88,14 +89,14 @@ class ObservableCollection(Observable, Generic[T]):
 
     def __setitem__(self, key, item):
         self._data[key] = item
-        self.notify([self._normalize_key(key)])
+        self.notify(self._normalize_key(key))
 
     def __getitem__(self, key):
         return self._data[key]
 
     def __delitem__(self, key):
         del self._data[key]
-        self.notify([self._normalize_key(key)])
+        self.notify(self._normalize_key(key))
 
     def __contains__(self, key):
         return key in self._data
@@ -149,13 +150,13 @@ class ObservableList(ObservableCollection[list]):
         self._data.append(item)
         self.notify([len(self._data) - 1])
 
-    def remove(self, item):
+    def remove(self, target):
         for idx, item in enumerate(self._data):
-            if item == item:
+            if item == target:
                 self._data.pop(idx)
                 self.notify([idx])
                 return
-        raise ValueError(f"Item {item} not found in list")
+        raise ValueError(f"Item {target} not found in list")
 
     def pop(self, idx: int):
         self._data.pop(idx)
@@ -237,26 +238,24 @@ class ObservableDict(ObservableCollection[dict]):
         return self._data.items()
 
 
-class AttrObservableDict(ObservableDict):
+@delegate(instance_name="_data")
+class AttrObservableDict:
     """A decorator for an observable dict that allows to access the dict's values as attributes"""
 
     def __init__(self, data: ObservableDict):
-        super().__init__(cast(dict, data))
+        dct = self.__dict__
         if not isinstance(data, ObservableDict):
             raise TypeError("data must be an ObservableDict")
-        data.attach(self.notify)
+        dct["_data"] = data
 
     def __getattr__(self, item):
         try:
             return self._data[item]
         except KeyError:
-            raise AttributeError(f"Dict has no attribute {item}")
+            raise AttributeError(f"{self.__class__} has no attribute {item}")
 
     def __setattr__(self, key, value):
-        if key.startswith("_"):
-            super().__setattr__(key, value)
-        else:
-            self._data[key] = value
+        self._data[key] = value
 
 
 class ObservableSet(ObservableCollection[set]):
