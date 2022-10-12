@@ -406,6 +406,8 @@ T = TypeVar("T")
 V = TypeVar("V")
 
 DELEGATE_BLACKLIST = {
+    "__init__",
+    "__new__",
     "__class__",
     "__delattr__",
     "__getattribute__",
@@ -462,16 +464,19 @@ def delegate(
         instance_name: Optional[str] = "",
         suppress: bool = False,
         enable_setattr: bool = False,
+        exclude: set[str] = frozenset(),
 ):
     """
     Composition & delegate.
 
     :param cls: the class that holds the V instance
     :param target: the target class
-    :param instance_getter: the function to get the instance of V
+    :param instance_getter: the function to get the instance of V. This method must
+    NOT call getattr(), for otherwise infinite recursion will results.
     :param instance_name: the name of the instance
     :param suppress: suppress the warning if target is not provided
     :param enable_setattr: enable __setattr__
+    :param exclude: a list of special methods to be excluded from binding
     :return: the decorated class
     """
 
@@ -489,7 +494,10 @@ def delegate(
         instance_name = target.__name__.lower()
     if instance_getter is None:
         def instance_getter(self):
-            return getattr(self, instance_name)
+            try:
+                return self.__dict__[instance_name]
+            except KeyError:
+                raise AttributeError
 
     def _get_instance(self):
         instance = instance_getter(self)
@@ -511,42 +519,45 @@ def delegate(
 
         return _call
 
-    if target is not None:
-        for attribute_name in dir(target):
-            attribute = getattr(target, attribute_name)
-            if not inspect.isfunction(attribute):
-                continue
-            if attribute_name in DELEGATE_BLACKLIST:
-                continue
-            if attribute_name in cls.__dict__:
-                continue
-            setattr(cls, attribute_name, _method(attribute_name))
+    stub_methods: set[str] = set()
 
+    if target is not None:
+        stub_methods.update(
+            attribute_name for attribute_name in dir(target) if
+            inspect.isfunction(getattr(target, attribute_name, None)) and attribute_name.startswith(
+                '__') and attribute_name.endswith('__'))
     else:
         if not suppress:
             warnings.warn(
                 f"No target class specified for {cls.__name__}. Using dunder methods list."
             )
-        for attribute_name in COMMON_DUNDER_METHODS:
-            if attribute_name in cls.__dict__:
-                continue
-            setattr(cls, attribute_name, _method(attribute_name))
+        stub_methods.update(COMMON_DUNDER_METHODS)
 
-        def _getattr(self, name: str):
-            return getattr(_get_instance(self), name)
+    # allow override
+    stub_methods -= set(cls.__dict__.keys())
+    # enforce blacklist and excludes
+    stub_methods -= (DELEGATE_BLACKLIST | set(exclude))
 
-        original_getattr = getattr(cls, "__getattr__", None)
-        if original_getattr is None:
-            setattr(cls, "__getattr__", _getattr)
-        else:
+    for attribute_name in stub_methods:
+        setattr(cls, attribute_name, _method(attribute_name))
 
-            def _fallback_getattr(self, name: str):
-                try:
-                    return original_getattr(self, name)
-                except AttributeError:
-                    return _getattr(self, name)
+    print(stub_methods)
 
-            setattr(cls, "__getattr__", _fallback_getattr)
+    def _getattr(self, name: str):
+        return getattr(_get_instance(self), name)
+
+    original_getattr = getattr(cls, "__getattr__", None)
+    if original_getattr is None:
+        setattr(cls, "__getattr__", _getattr)
+    else:
+
+        def _fallback_getattr(self, name: str):
+            try:
+                return original_getattr(self, name)
+            except AttributeError:
+                return _getattr(self, name)
+
+        setattr(cls, "__getattr__", _fallback_getattr)
     if enable_setattr:
 
         def _setattr(self, name: str, value: Any):

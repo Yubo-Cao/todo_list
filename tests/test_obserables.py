@@ -2,9 +2,13 @@ from typing import Optional
 
 import pytest
 
-from todo.model import ObservableList
-from todo.model.observables import ObservableDict, AttrObservableDict, ObservableCollection
+from todo.model.observables import ObservableDict, AttributeObservable, ObservableCollection, ObservableList, observable
 
+
+def test_observe_wrap():
+    data = {}
+    assert (parent := observable(data)) == ObservableDict({})
+    assert observable([], parent).parent == parent
 
 def test_observable_list():
     changes = []
@@ -88,7 +92,7 @@ def test_attr_dct():
     dct.attach(callback)
     dct.a = 3
 
-    dct = AttrObservableDict(dct)
+    dct = AttributeObservable(dct)
     with pytest.warns(UserWarning):
         dct.attach(callback)  # should warn about duplicate callback
 
@@ -97,6 +101,9 @@ def test_attr_dct():
     assert dct.a == 4
     assert dct["a"] == 4
     assert dct == {"a": 4, "b": 2}  # __eq__ is implemented
+
+    with pytest.raises(AttributeError):
+        dct.c
 
 
 def test_nested():
@@ -107,7 +114,16 @@ def test_nested():
         changes.append(idx)
 
     dct.attach(callback)
-    dct = AttrObservableDict(dct)
+    dct = AttributeObservable(dct)
     assert dct.b.c == 2
+    assert type(dct) == AttributeObservable
+    assert dct.b.parent == dct
     dct.b.c = 3
     assert changes == [(["c"], dct.b)]
+
+    changes.clear()
+    dct.b = (1, [1, 2])
+    assert changes == [(["b"], dct)]
+    changes.clear()
+    dct.b[1].append(3)
+    assert changes == [([2], dct.b[1])]

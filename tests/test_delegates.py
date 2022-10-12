@@ -1,3 +1,5 @@
+import pytest
+
 from todo.utils import delegate
 
 
@@ -42,6 +44,24 @@ def test_delegate():
     assert b.normal() == "C"
 
 
+def test_no_instance():
+    class A:
+        def normal(self):
+            return "normal A"
+
+        def __call__(self):
+            return "call A"
+
+    @delegate(target=A, instance_name="a")
+    class B: pass
+
+    b = B()
+    with pytest.raises(AttributeError):
+        b.normal()
+    with pytest.raises(AttributeError):
+        b()
+
+
 def test_delegates_no_target():
     class A:
         def __init__(self, data):
@@ -56,7 +76,7 @@ def test_delegates_no_target():
         def normal(self):
             return self.data
 
-    @delegate(instance_name="a", suppress_log=True)
+    @delegate(instance_name="a", suppress=True)
     class B:
         def __init__(self, a):
             self.a = a
@@ -90,7 +110,7 @@ def test_getattr():
                 return 1
             raise AttributeError
 
-    @delegate(instance_name="a", suppress_log=True)
+    @delegate(instance_name="a", suppress=True)
     class B:
         def __init__(self, a):
             self.a = a

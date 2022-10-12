@@ -68,10 +68,20 @@ class ObservableCollection(Observable, Generic[T]):
                 "__init__",
                 "__new__",
                 "__setitem__",
+                "__getattr__"
             }:
                 continue
             wrapper: Callable[[Callable], Callable] = kwargs.get("wrapper", ObservableCollection._observe_wrapper)
             setattr(cls, name, wrapper(meth))
+
+        if (_getattr := getattr(cls, "__getattr__", None)):
+            def _wrap_getattr(self, name: str):
+                result = _getattr(self, name)
+                if isinstance(result, ObservableCollection):
+                    return result
+                if callable(result):
+                    return wrapper(result)
+                return result
         return cls
 
     def notify(self, index: Any) -> None:
@@ -86,9 +96,7 @@ class ObservableCollection(Observable, Generic[T]):
     def _observe_wrapper(cls, fn):
         @functools.wraps(fn)
         def wrapper(self, *args, **kwargs):
-            obs = observable(fn(self, *args, **kwargs))
-            if isinstance(obs, ObservableCollection):
-                obs._parent = self
+            obs = observable(fn(self, *args, **kwargs), self)
             return obs
 
         return wrapper
@@ -136,20 +144,14 @@ class ObservableCollection(Observable, Generic[T]):
     def data(self):
         return self._data
 
-    @classmethod
-    def to_data(cls, data: "ObservableCollection[T]") -> T:
+    def to_data(self) -> T:
         """
         Recursively convert an ObservableCollection to pure data
         """
 
-        if isinstance(data, ObservableDict):
-            return {k: cls.to_data(v) for k, v in data.items()}
-        elif isinstance(data, ObservableList):
-            return [cls.to_data(v) for v in data]
-        elif isinstance(data, ObservableSet):
-            return {cls.to_data(v) for v in data}
-        else:
-            return data
+    @property
+    def parent(self):
+        return self._parent
 
 
 class ObservableList(ObservableCollection[list]):
@@ -157,8 +159,8 @@ class ObservableList(ObservableCollection[list]):
     Represent an observable list.
     """
 
-    def __init__(self, data: list):
-        super().__init__(data)
+    def __init__(self, data: list, parent: Optional[ObservableCollection] = None):
+        super().__init__(data, parent)
 
     _PLACEHOLDER = object()
 
@@ -210,8 +212,8 @@ class ObservableList(ObservableCollection[list]):
 class ObservableDict(ObservableCollection[dict]):
     """Represents an observable dict"""
 
-    def __init__(self, data: dict):
-        super().__init__(data)
+    def __init__(self, data: dict, parent: Optional[ObservableCollection] = None):
+        super().__init__(data, parent)
 
     _PLACEHOLDER = object()
 
@@ -258,17 +260,15 @@ def _attr_dict_wrapper(fn):
     """Wrap a function that returns an ObservableDict to make it an AttrObservableDict"""
 
     def _wrapper(self, *args, **kwargs):
-        obs = observable(fn(self, *args, **kwargs))
+        obs = observable(fn(self, *args, **kwargs), self)
         if isinstance(obs, ObservableCollection):
-            obs._parent = self
-        if isinstance(obs, ObservableDict):
-            return AttrObservableDict(obs)
+            obs = AttributeObservable(obs)
         return obs
 
     return _wrapper
 
 
-def _attr_dict_cls(cls):
+def _attribute_observe(cls):
     """Wrap a class that returns an ObservableDict to make it an AttrObservableDict"""
 
     for name, fn in cls.__dict__.items():
@@ -278,39 +278,39 @@ def _attr_dict_cls(cls):
         setattr(cls, name, _attr_dict_wrapper(fn))
     _getattr = getattr(cls, "__getattr__", None)
     if _getattr is not None:
-        def _wrapped_getattr(self, name):
-            result = _getattr(self, name)
+        def _wrapped_getattr(self, name: str):
+            if name.startswith("_"):
+                return _getattr(self, name)
+            result = observable(_getattr(self, name), self)
+            if isinstance(result, ObservableCollection):
+                return AttributeObservable(result)
             if callable(result):
                 return _attr_dict_wrapper(result)
-            obs = observable(result)
-            if isinstance(obs, ObservableCollection):
-                obs._parent = self
-            if isinstance(obs, ObservableDict):
-                return AttrObservableDict(obs)
-            return obs
+            return result
 
         setattr(cls, "__getattr__", _wrapped_getattr)
     return cls
 
 
-@_attr_dict_cls
+@_attribute_observe
 @delegate(instance_name="_data", suppress=True)
-class AttrObservableDict:
+class AttributeObservable(ObservableCollection[dict]):
     """A decorator for an observable dict that allows to access the dict's values as attributes"""
 
-    def __init__(self, data: ObservableDict):
-        if not isinstance(data, ObservableDict):
-            raise TypeError("data must be an ObservableDict")
-        self._data = data
+    def __init__(self, data: ObservableCollection | list | set | dict | tuple,
+                 parent: Optional[ObservableCollection] = None):
+        self._data = observable(data, parent)
 
     def __getattr__(self, item):
-        try:
-            return self._data[item]
-        except KeyError:
-            raise AttributeError(f"{self.__class__} has no attribute {item}")
+        if isinstance(self._data, ObservableDict):
+            try:
+                return self._data[item]
+            except KeyError:
+                pass
+        raise AttributeError(f"{self.__class__} has no attribute {item}")
 
     def __setattr__(self, key, value):
-        if key.startswith("_"):
+        if key.startswith("_") or not isinstance(self._data, ObservableDict):
             super().__setattr__(key, value)
         else:
             self._data[key] = value
@@ -319,8 +319,8 @@ class AttrObservableDict:
 class ObservableSet(ObservableCollection[set]):
     """Represents an observable set"""
 
-    def __init__(self, data: set):
-        super().__init__(data)
+    def __init__(self, data: set, parent: Optional[ObservableCollection] = None):
+        super().__init__(data, parent)
 
     def add(self, item):
         self._data.add(item)
@@ -381,8 +381,8 @@ class ObservableSet(ObservableCollection[set]):
 class ObservableTuple(ObservableCollection[tuple]):
     """Represents an observable tuple"""
 
-    def __init__(self, data: tuple):
-        super().__init__(data)
+    def __init__(self, data: tuple, parent: Optional[ObservableCollection] = None):
+        super().__init__(data, parent)
 
     def __add__(self, other):
         return self._data + other
@@ -391,25 +391,29 @@ class ObservableTuple(ObservableCollection[tuple]):
         return self._data * other
 
 
-def observable(data, warning: bool = False) -> Any:
+def observable(data, parent: Optional[ObservableCollection] = None, warning: bool = False) -> Any:
     """
     Make sure data is observed, as much as possible
     :param data: the data to observe
+    :param parent: if not None, the data will have this as parent
     :param warning: if True, a warning will be raised if the data is not observed
     """
 
-    if not isinstance(data, Iterable) or isinstance(data, str | bytes) or isinstance(data, Observable):
+    if not isinstance(data, Iterable) or isinstance(data, str | bytes):
         return data
+    if isinstance(data, ObservableCollection):
+        data._parent = parent
     match data:
         case list():
-            return ObservableList(data)
+            data = ObservableList(data, parent)
         case dict():
-            return ObservableDict(data)
+            data = ObservableDict(data, parent)
         case set():
-            return ObservableSet(data)
+            data = ObservableSet(data, parent)
         case tuple():
-            return ObservableTuple(data)
+            data = ObservableTuple(data, parent)
         case _:
             if warning:
                 warnings.warn(f"Data {data} is not observed")
             return data
+    return data
