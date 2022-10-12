@@ -43,6 +43,7 @@ class YamlFileObserver(Observer):
             dt = default_data() if callable(default_data) else default_data
             if dt is None:
                 raise ValueError("default_data cannot be None")
+            self.dump(dt)
             return dt
 
         self._default_data = _default_data
