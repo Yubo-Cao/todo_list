@@ -1,4 +1,6 @@
-from todo.utils import ClassInstanceDispatch
+import pytest
+
+from todo.utils import ClassInstanceDispatch, index_range
 
 
 def test_dispatch():
@@ -75,3 +77,17 @@ def test_decorator():
     client = Client(Test("test"))
     assert client.test_fn("value") == "value"
     assert history == ["test", "value"]
+
+
+def test_index():
+    idx = [5, 0, 1, 2]
+    assert index_range(idx) == (0, 5)
+    idx = [slice(0, 5), slice(-5, 5)]
+    assert index_range(idx) == (-5, 4)
+    idx = ["a", "b", "c"]
+    with pytest.raises(TypeError):
+        index_range(idx)
+    idx = [slice(0, 5), slice(5, 10), 11]
+    assert index_range(idx) == (0, 11)
+    assert index_range(5) == (5, 5)
+    assert index_range(slice(0, 5)) == (0, 4)

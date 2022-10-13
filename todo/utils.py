@@ -570,3 +570,30 @@ def delegate(
         setattr(cls, "__setattr__", _setattr)
 
     return cls
+
+
+def index_range(index: list[slice | int] | slice | int) -> tuple[int, int]:
+    """
+    Get the start and end of the index.
+
+    :param index: the index
+    :return: the start and end
+    """
+
+    if not isinstance(index, list):
+        index = [index]
+    if any(isinstance(x, str) for x in index):
+        raise TypeError("Unable to get begin and end of index with string.")
+    begin, end = None, None
+    for x in index:
+        if isinstance(x, slice):
+            if begin is None:
+                begin = x.start
+            if end is None:
+                end = x.stop - 1
+            begin = min(begin, x.start)
+            end = max(end, x.stop - 1)
+        else:
+            begin = min(begin, x) if begin is not None else x
+            end = max(end, x) if end is not None else x
+    return begin, end
