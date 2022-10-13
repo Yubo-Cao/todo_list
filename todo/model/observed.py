@@ -53,7 +53,7 @@ class Observable:
             observer(value)
 
     @property
-    def observers(self):
+    def observers(self) -> list[Observer]:
         return self._observers
 
 
@@ -67,7 +67,7 @@ class Action(Enum):
 
 
 ALL = object()
-Index = Union[list[Union[int, slice, Hashable]], Literal[ALL], list[Literal[ALL]]]
+Index = Union[list[Union[int, slice, Hashable]], Literal[ALL], list[Literal[ALL]]]  # type: ignore
 
 
 @dataclass(init=False)
@@ -95,6 +95,9 @@ class Notify(Generic[T]):
         if isinstance(index, Iterable):
             return list(index)
         raise TypeError(f"Invalid index type: {Action(index)}")
+
+
+CollectionObserver = Callable[[Notify], None]
 
 
 class ObservedCollection(Observable, Generic[T]):
@@ -129,6 +132,16 @@ class ObservedCollection(Observable, Generic[T]):
         super().notify(index)
         if self._parent:
             self._parent.notify(index)
+
+    def attach(self, obs: list[CollectionObserver] | CollectionObserver) -> None:
+        super().attach(obs)
+
+    def detach(self, obs: list[CollectionObserver] | CollectionObserver) -> None:
+        super().detach(obs)
+
+    @property
+    def observers(self) -> list[CollectionObserver]:
+        return super().observers
 
     @classmethod
     def _observe_wrapper(cls, fn):
@@ -486,13 +499,13 @@ def observable(data, parent: Optional[ObservedCollection] = None, warning: bool 
         return data
     match data:
         case list():
-            data = ObservedList(data, parent)
+            data = ObservedList(data, parent)  # type: ignore
         case dict():
-            data = ObservedDict(data, parent)
+            data = ObservedDict(data, parent)  # type: ignore
         case set():
-            data = ObservedSet(data, parent)
+            data = ObservedSet(data, parent)  # type: ignore
         case tuple():
-            data = ObservedTuple(data, parent)
+            data = ObservedTuple(data, parent)  # type: ignore
         case _:
             if warning:
                 warnings.warn(f"Data {data} is not observed")

@@ -4,7 +4,7 @@ from typing import Any
 from yaml import YAMLError, dump, load
 
 from todo.log import get_logger
-from todo.model.observed import Observer, ObservedCollection, observable, ObservedDot, Notify
+from todo.model.observed import Observer, ObservedCollection, observable, Notify
 
 try:
     from yaml import CDumper as Dumper

@@ -5,6 +5,7 @@ from PySide6.QtGui import QPixmap, QImage
 
 from todo.model import ObservedCollection
 from todo.model.data import todo_list
+from todo.model.observed import Notify
 
 
 class TodoListModel(QAbstractListModel):
@@ -62,7 +63,7 @@ class TodoListModel(QAbstractListModel):
             return Qt.ItemIsEnabled
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
-    def on_change_handler(self, value):
+    def on_change_handler(self, notify: Notify):
         """Called when the todo_list changes"""
         indices = value[0]
         self.dataChanged.emit(self.index(indices[0]), self.index(indices[-1]))
