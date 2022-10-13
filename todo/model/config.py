@@ -1,7 +1,7 @@
 from todo.globals import data_path, cache_path, log_path, config_path
 from todo.log import get_logger
 from todo.model import YamlFileObserver
-from todo.model.observables import AttributeObservable
+from todo.model.observed import ObservedDot
 
 logger = get_logger(__name__, use_config=False)
 
@@ -24,4 +24,4 @@ def _default_config():
     }
 
 
-config = AttributeObservable(YamlFileObserver(_default_config, config_path / "config.yaml").to_observable())
+config = ObservedDot(YamlFileObserver(_default_config, config_path / "config.yaml").to_observable())

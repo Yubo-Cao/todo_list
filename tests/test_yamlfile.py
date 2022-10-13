@@ -2,12 +2,12 @@ from pathlib import Path
 
 from yaml import load, Loader
 
-from todo.model import AttributeObservable, YamlFileObserver
+from todo.model import ObservedDot, YamlFileObserver
 
 path = Path("tests/test.yaml")
 path.unlink(missing_ok=True)
 file_observer = YamlFileObserver({}, path)
-yaml = AttributeObservable(file_observer.to_observable())
+yaml = ObservedDot(file_observer.to_observable())
 
 
 def test_load():
@@ -35,7 +35,7 @@ def test_nested():
 def test_iter():
     yaml.test = [{"a": "b"}, {"c": "d"}]
     for item in yaml.test:
-        assert isinstance(item, AttributeObservable)
+        assert isinstance(item, ObservedDot)
 
 
 def test_fn():

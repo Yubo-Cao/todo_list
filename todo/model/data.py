@@ -1,24 +1,27 @@
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import NamedTuple, Optional
+from typing import Optional
 
 from PIL import Image
 
 from todo.globals import data_path
-from todo.model.observables import ObservableList
+from todo.model import YamlFileObserver
+from todo.model.observed import ObservedList, ObservedCollection
 
 
-class TodoItem(NamedTuple):
+@dataclass(frozen=True)
+class TodoItem:
     """
     Represent a todo item.
     """
 
     title: str
-    completed: bool
-    created_date: datetime
-    photo: Optional[Image.Image] = None
     description: str = ""
-    subtask: list["TodoItem"] = []
+    completed: bool = False
+    photo: Optional[Image.Image] = None
     due_date: Optional[datetime] = None
+    subtasks: list["TodoItem"] = field(default_factory=list)
+    created_date: datetime = field(default_factory=datetime.now)
 
 
-todo_list: ObservableList = ObservableList(data_path / "todo_list.yaml")
+todo_list: ObservedCollection[list] = YamlFileObserver([], data_path / "todo_list.yaml").to_observable()

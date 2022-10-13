@@ -3,15 +3,13 @@ from typing import Any
 from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
 from PySide6.QtGui import QPixmap, QImage
 
-from todo.model import ObservableList
+from todo.model import ObservedCollection
 from todo.model.data import todo_list
 
 
 class TodoListModel(QAbstractListModel):
-    def __init__(self, *args, todos: ObservableList = None, **kwargs):
+    def __init__(self, *args, todos: ObservedCollection[list], **kwargs):
         super().__init__(*args, **kwargs)
-        if todos is None:
-            todos = ObservableList()
         self.todos = todos
         todos.attach(self.on_change_handler)
 

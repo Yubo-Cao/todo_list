@@ -4,7 +4,7 @@ from typing import Any
 from yaml import YAMLError, dump, load
 
 from todo.log import get_logger
-from todo.model.observables import Observer, ObservableCollection, observable, AttributeObservable
+from todo.model.observed import Observer, ObservedCollection, observable, ObservedDot, Notify
 
 try:
     from yaml import CDumper as Dumper
@@ -43,13 +43,14 @@ class YamlFileObserver(Observer):
             dt = default_data() if callable(default_data) else default_data
             if dt is None:
                 raise ValueError("default_data cannot be None")
+            dt = observable(dt)
             self.dump(dt)
             return dt
 
         self._default_data = _default_data
         self._observed = None
 
-    def to_observable(self) -> ObservableCollection:
+    def to_observable(self) -> ObservedCollection:
         """
         Create an observable collection from the data in the file.
         """
@@ -85,7 +86,7 @@ class YamlFileObserver(Observer):
         except IOError as e:
             raise YamlFileError(f"Unknown IOError {e!r} during loading", self.path) from e
 
-    def dump(self: "YamlFileObserver", val: ObservableCollection) -> None:
+    def dump(self: "YamlFileObserver", val: ObservedCollection) -> None:
         """
         Dump the data to the file.
         """
@@ -100,8 +101,8 @@ class YamlFileObserver(Observer):
         except IOError as e:
             raise YamlFileError(f"Unknown IOError {e!r} during dumping", self.path) from e
 
-    def __call__(self, val):
-        self.dump(val[0])
+    def __call__(self, notify: Notify):
+        self.dump(notify.observed)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(path={self.path!r})"''

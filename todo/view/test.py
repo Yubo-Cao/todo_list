@@ -1,11 +1,12 @@
 import os
 import sys
+from datetime import datetime
 
 from PySide6 import QtCore
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
-from todo.model import TodoListModel
+from todo.model import TodoItem, todo_list, todo_list_model
 
 
 def qt_message_handler(mode, context, message):
@@ -33,4 +34,11 @@ if __name__ == "__main__":
     engine.load(QtCore.QUrl.fromLocalFile(qml_filename))
     if not engine.rootObjects():
         sys.exit(-1)
-    model = TodoListModel()
+    engine.rootObjects()[0].setProperty("model", todo_list_model)
+    todo_list.append(
+        TodoItem(
+            "Test",
+            "This is a test",
+        )
+    )
+    sys.exit(app.exec())
