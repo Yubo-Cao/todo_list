@@ -5,26 +5,26 @@ from PySide6.QtGui import QPixmap, QImage
 
 from todo.model import ObservedCollection
 from todo.model.data import todo_list
-from todo.model.observed import Notify
+from todo.model.observed import Notify, Action
+from todo.utils import index_range
 
 
 class TodoListModel(QAbstractListModel):
     def __init__(self, *args, todos: ObservedCollection[list], **kwargs):
         super().__init__(*args, **kwargs)
         self.todos = todos
-        todos.attach(self.on_change_handler)
+        todos.attach(self)
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.todos)
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole):
+        print("data", index, role)
         if not index.isValid() or index.row() > len(self.todos):
             return None
         match role:
             case Qt.DisplayRole | Qt.EditRole:
-                return self.todos[index.row()].title
-            case Qt.WhatsThisRole:
-                return self.todos[index.row()].description
+                return self.todos[index.row()]
             case Qt.DecorationRole:
                 img = self.todos[index.row()].photo
                 return QPixmap.fromImage(
@@ -63,11 +63,14 @@ class TodoListModel(QAbstractListModel):
             return Qt.ItemIsEnabled
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
-    def on_change_handler(self, notify: Notify):
+    def __call__(self, notify: Notify):
         """Called when the todo_list changes"""
-        indices = value[0]
-        self.dataChanged.emit(self.index(indices[0]), self.index(indices[-1]))
-        self.layoutChanged.emit()
+        match notify.action:
+            case Action.UPDATE | Action.MOVE:
+                begin, end = index_range(notify.index)
+                self.dataChanged.emit(begin, end)
+            case Action.CREATE:
+                self.layoutChanged.emit()
 
 
 todo_list_model = TodoListModel(todos=todo_list)

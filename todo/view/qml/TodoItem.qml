@@ -5,12 +5,12 @@ import QtQuick.Layouts 1.15
 RoundPane {
     property string title
     property string description: ""
-    property date dueDate: new Date()
-    property date createDate: new Date()
-    property bool displayDate: true
+    property date due_date: new Date()
+    property date create_date: new Date()
+    property bool display_date: true
     property int elevation: 1
     property bool completed: false
-    property string picture: "null"
+    property string photo: "null"
     property var subtasks: []
     
 
@@ -19,10 +19,30 @@ RoundPane {
     Material.elevation: elevation
     font.family: "Roboto"
     Layout.fillWidth: true
+    Layout.preferredHeight: 100
+    Layout.minimumHeight: 75
+    width: parent.width
+
     
     RowLayout {
         id: content
         spacing: 8
+
+        MouseArea {
+            id: mouseArea
+            width: parent.width
+            height: parent.height
+            propagateComposedEvents: true
+
+            hoverEnabled: true
+            onEntered: {
+                elevation = 2
+                cursorShape = Qt.PointingHandCursor
+            }
+            onExited: {
+                elevation = 1
+            }
+        }
 
         CheckBox {
             id: checkBox
@@ -52,24 +72,12 @@ RoundPane {
                     font.pointSize: 10
                     visible: description !== ""
                 }
-                MouseArea {
-                    id: mouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: {
-                        elevation = 2
-                        cursorShape = Qt.PointingHandCursor
-                    }
-                    onExited: {
-                        elevation = 1
-                    }
-                }
             }
 
             RowLayout {
                 id: dateRow
                 spacing: 4
-                visible: displayDate
+                visible: display_date
                 
                 RowLayout {
                     spacing: 2
@@ -82,7 +90,7 @@ RoundPane {
                     }
                     Text {
                         id: dueDateText
-                        text: "Due: " + dueDate.toLocaleDateString(Locale.systemLocale, Locale.ShortFormat)
+                        text: "Due: " + due_date.toLocaleDateString(Locale.systemLocale, Locale.ShortFormat)
                         font.pointSize: 8
                         color: Material.color(Material.Grey, Material.Shade500)
                         Layout.alignment: Qt.AlignVCenter
@@ -101,7 +109,7 @@ RoundPane {
                     }
                     Text {
                         id: createDateText
-                        text: "Started: " + createDate.toLocaleDateString(Locale.systemLocale, Locale.ShortFormat)
+                        text: "Started: " + create_date.toLocaleDateString(Locale.systemLocale, Locale.ShortFormat)
                         font.pointSize: 8
                         color: Material.color(Material.Grey, Material.Shade500)
                         Layout.alignment: Qt.AlignVCenter
@@ -112,11 +120,11 @@ RoundPane {
 
         Image {
             id: pictureItem
-            source: picture
+            source: photo
             Layout.alignment: Qt.AlignVCenter
             Layout.preferredWidth: 30
             Layout.preferredHeight: 30
-            visible: picture !== null
+            visible: photo !== null && photo !== "null" && photo !== ""
         }
     }
 }

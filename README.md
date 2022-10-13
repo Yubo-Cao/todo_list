@@ -19,3 +19,14 @@ are worth sharing.
       thread.
     - Because of async programming, multiple plugins can be run at the same
       time quickly.
+
+Todo List is a free software that helps you to keep track
+of your tasks. It is written in Python and uses Qt for the GUI. As 
+a result, it provides a tight integration with the desktop environment,
+as compared to web apps. Asynchronous programming is used to make the integrations of the plugins
+run in the background in efficient way. Currently, an integration of 
+student portal of my high school is provided, which checks the grade
+changes and notifies the user. API is provided for developers
+to write their own plugins. Because the usage of abstract class/interface,
+type-hinting, and extensive doc strings, it is easy to write plugins
+without knowing the implementation details of the app.

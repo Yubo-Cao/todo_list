@@ -34,11 +34,15 @@ if __name__ == "__main__":
     engine.load(QtCore.QUrl.fromLocalFile(qml_filename))
     if not engine.rootObjects():
         sys.exit(-1)
-    engine.rootObjects()[0].setProperty("model", todo_list_model)
-    todo_list.append(
-        TodoItem(
-            "Test",
-            "This is a test",
-        )
-    )
+    root = engine.rootObjects()[0]
+
+    # root.findChild(QtCore.QObject, "todoList").setProperty("model", todo_list_model)
+    # engine.rootObjects()[0].setProperty("model", todo_list_model)
+    # if not todo_list:
+    #     todo_list.append(
+    #         TodoItem(
+    #             "Test",
+    #             "This is a test",
+    #         )
+    #     )
     sys.exit(app.exec())

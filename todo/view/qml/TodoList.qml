@@ -3,7 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    property var model
+    objectName: "todoList"
 
     ColumnLayout {
         anchors {
@@ -32,24 +32,16 @@ Item {
                 Layout.fillWidth: true
             }
             Button {
-                onClicked: {
-                    console.log("clicked")
-                }
-                padding: 8
+                padding: 16
                 Material.background: Material.background
-
-                Row {
+                contentItem: RowLayout {
                     spacing: 4
-                    anchors {
-                        margins: 8
-                        centerIn: parent
-                    }
-
                     Text {
                         text: "\ue164"
                         font.family: "Material Icons"
                         font.pixelSize: 24
                         color: Material.accent
+                        Layout.alignment: Qt.AlignVCenter
                     }
                     Text {
                         text: "Sort"
@@ -65,15 +57,34 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             model: model
+            spacing: 8
 
             delegate: TodoItem {
-                title: title
-                description: description
-                dueDate: dueDate
-                createDate: createDate
-                completed: completed
-                picture: picture
+                title: model.title
+                description: model.description ? model.description : ""
+                due_date: model.due_date ? model.due_date : new Date()
+                completed: model.completed
+                photo: model.photo ? model.photo : "null"
+                create_date: model.create_date ? model.create_date : new Date()
+                subtasks: model.subtasks ? model.subtasks : undefined
             }
+        }
+    }
+
+    ListModel {
+        objectName: "model"
+        id: model
+        ListElement {
+            title: "Task 1"
+            description: "This is a task"
+            completed: false
+            picture: "https://picsum.photos/200/300"
+        }
+        ListElement {
+            title: "Task 2"
+            description: "This is a task"
+            completed: false
+            picture: "https://picsum.photos/200/300"
         }
     }
 }
