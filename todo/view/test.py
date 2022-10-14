@@ -1,6 +1,5 @@
 import os
 import sys
-from datetime import datetime
 
 from PySide6 import QtCore
 from PySide6.QtGui import QGuiApplication
@@ -36,13 +35,13 @@ if __name__ == "__main__":
         sys.exit(-1)
     root = engine.rootObjects()[0]
 
-    # root.findChild(QtCore.QObject, "todoList").setProperty("model", todo_list_model)
-    # engine.rootObjects()[0].setProperty("model", todo_list_model)
-    # if not todo_list:
-    #     todo_list.append(
-    #         TodoItem(
-    #             "Test",
-    #             "This is a test",
-    #         )
-    #     )
+    root.findChild(QtCore.QObject, "todoList").setProperty("model", todo_list_model)
+    engine.rootObjects()[0].setProperty("model", todo_list_model)
+    if not todo_list:
+        todo_list.append(
+            TodoItem(
+                "Test",
+                "This is a test",
+            )
+        )
     sys.exit(app.exec())
