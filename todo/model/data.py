@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, cast
 
 from PIL import Image
 
 from todo.globals import data_path
 from todo.model import YamlFileObserver
-from todo.model.observed import ObservedList, ObservedCollection
+from todo.model.observed import ObservedList
 
 
 @dataclass(frozen=True)
@@ -24,4 +24,4 @@ class TodoItem:
     created_date: datetime = field(default_factory=datetime.now)
 
 
-todo_list: ObservedCollection[list] = YamlFileObserver([], data_path / "todo_list.yaml").to_observable()
+todo_list: ObservedList = cast(ObservedList, YamlFileObserver([], data_path / "todo_list.yaml").to_observable())
