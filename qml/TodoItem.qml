@@ -1,19 +1,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import "components"
 
 RoundPane {
-    property string title
-    property string description: ""
-    property date due_date: new Date()
-    property date create_date: new Date()
-    property bool display_date: true
-    property int elevation: 1
-    property bool completed: false
-    property string photo: "null"
-    property var subtasks: []
-    
-
     padding: 8
     radius: 8
     Material.elevation: elevation

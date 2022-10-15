@@ -1,24 +1,19 @@
-import sys
+from PySide6.QtQuickWidgets import QQuickWidget
 
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QMainWindow
-from PySide6.QtWidgets import QListView
-
-from todo.model import todo_list_model, todo_list, TodoItem
+from todo.model import TodoListModel
 
 
-def main():
-    app = QApplication(sys.argv)
-    window = QMainWindow()
-    window.setWindowTitle("Todo App")
-    layout = QVBoxLayout()
-    view = QListView()
-    view.setModel(todo_list_model)
-    todo_list.append(TodoItem("Test", None, "Test", False, [], None, None, None))
-    layout.addWidget(view)
-    window.setLayout(layout)
-    window.show()
-    sys.exit(app.exec())
+class TodoListView(QQuickWidget):
+    def __init__(self, model: TodoListModel):
+        super().__init__()
+        self.setSource("./qml/TodoListView.qml")
+        self.model = model
 
+    @property
+    def model(self) -> TodoListModel:
+        return self._model
 
-if __name__ == "__main__":
-    main()
+    @model.setter
+    def model(self, model: TodoListModel):
+        self._model = model
+        self.rootContext().setContextProperty("model", self._model)

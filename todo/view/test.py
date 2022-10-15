@@ -2,10 +2,12 @@ import os
 import sys
 
 from PySide6 import QtCore
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import QUrl
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtWidgets import QApplication
 
 from todo.model import TodoItem, todo_list, todo_list_model
+from todo.view.todolistview import TodoListView
 
 
 def qt_message_handler(mode, context, message):
@@ -25,18 +27,17 @@ def qt_message_handler(mode, context, message):
 
 
 if __name__ == "__main__":
-    os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
+    os.environ["QT_QUICK_CONTR-OLS_STYLE"] = "Material"
     QtCore.qInstallMessageHandler(qt_message_handler)
-    app = QGuiApplication(sys.argv)
+
+    app = QApplication(sys.argv)
     engine = QQmlApplicationEngine()
-    qml_filename = os.path.join(os.path.dirname(__file__), "qml/Test.qml")
-    engine.load(QtCore.QUrl.fromLocalFile(qml_filename))
+    engine.load(QUrl("qml/Test.qml"))
     if not engine.rootObjects():
         sys.exit(-1)
-    root = engine.rootObjects()[0]
+    # root = engine.rootObjects()[0]
+    # view = TodoListView(todo_list_model)
 
-    root.findChild(QtCore.QObject, "todoList").setProperty("model", todo_list_model)
-    engine.rootObjects()[0].setProperty("model", todo_list_model)
     if not todo_list:
         todo_list.append(
             TodoItem(
