@@ -494,7 +494,8 @@ def observable(data, parent: Optional[ObservedCollection] = None, warning: bool 
     """
 
     if isinstance(data, ObservedCollection):
-        data._parent = parent
+        if parent:
+            data._parent = parent
     if not isinstance(data, Iterable) or isinstance(data, str | bytes):
         return data
     match data:
