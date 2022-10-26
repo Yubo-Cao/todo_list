@@ -5,7 +5,6 @@ import QtQuick.Dialogs
 import QtQuick.Controls.Material 2.15
 import QtQuick.Controls.Material.impl 2.15
 
-// unable to ensure round corners for the image
 Rectangle {
     id: root
     property alias source: image.source
@@ -17,10 +16,11 @@ Rectangle {
 
     Image {
         id: image
-
         source: ""
         anchors.centerIn: parent
         fillMode: Image.PreserveAspectCrop
+        width: parent.width
+        height: parent.height
     }
 
     Component.onCompleted: {
