@@ -7,8 +7,8 @@ import "components"
 ApplicationWindow {
     id: window
     visible: true
-    width: 640
-    height: 480
+    width: 1024
+    height: 768
     title: "Todo List"
 
     property string page_title: "My todos"
@@ -17,36 +17,49 @@ ApplicationWindow {
     Material.accent: Material.Blue
 
     FontLoader { source: "../fonts/MaterialIcons-Regular.ttf" }
+    FontLoader { source: "../fonts/Roboto-Regular.ttf" }
+    FontLoader { source: "../fonts/Roboto-Thin.ttf" }
 
     header: ToolBar {
         RowLayout {
-            spacing: 16
+            spacing: 8
+            anchors.leftMargin: 8
+            anchors.rightMargin: 8
             anchors.fill: parent
 
-            IconButton {
+            RoundButton {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: 16
-                Layout.bottomMargin: -2
+                 Material.background: "transparent"
 
-                icon: "menu"
                 onClicked: function() {
                     drawer.open()
                 }
+
+                contentItem: MIcon {
+                    icon: "menu"
+                    color: "white"
+                }
             }
 
-            Label {
+            Text {
                 id: titleLabel
                 text: page_title
                 font.pixelSize: 20
-                verticalAlignment: Qt.AlignVCenter
-                horizontalAlignment: Qt.AlignLeft
+                color: "white"
+                verticalAlignment: Text.AlignVCenter
+                Layout.alignment: Qt.AlignVCenter
                 Layout.fillWidth: true
             }
 
-            IconButton {
+            RoundButton {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: 16
-                icon: "more_vert"
+                // flat
+                 Material.background: "transparent"
+
+                contentItem: MIcon {
+                    icon: "more_vert"
+                    color: "white"
+                }
 
                 onClicked: function() {
                     optionsMenu.open()
@@ -83,44 +96,31 @@ ApplicationWindow {
             delegate: ItemDelegate {
                 width: parent.width
                 text: model.title
-                contentItem: RowLayout {
-                    spacing: 16
-                    anchors.fill: parent
-                    Text {
-                        text: model.icon
-                        font.pixelSize: 24
-                        Layout.leftMargin: 16
-                        verticalAlignment: Qt.AlignVCenter
-                        horizontalAlignment: Qt.AlignLeft
-                        font.family: "Material Icons"
-                    }
-
-                    Label {
-                        text: model.title
-                        font.pixelSize: 16
-                        verticalAlignment: Qt.AlignVCenter
-                        horizontalAlignment: Qt.AlignLeft
-                        Layout.fillWidth: true
-                    }
+                contentItem: MIconLabel {
+                    icon: model.icon
+                    text: model.title
+                    text_size: 16
                 }
                 highlighted: ListView.isCurrentItem
                 onClicked: {
                     if (listView.currentIndex != index) {
                         listView.currentIndex = index
-                        titleLabel.text = model.title
-                        stackView.replace(model.source)
+                        titleLabel.text = title
+                        stackView.replace(source, {
+                            "model": todoModel
+                        })
                     }
                     drawer.close()
                 }
             }
 
             model: ListModel {
-                ListElement { title: "My todos"; source: "TodoView.qml"; icon: "list" }
-                ListElement { title: "My notes"; source: "Notes.qml"; icon: "note" }
-                ListElement { title: "My grade"; source : "Grade.qml"; icon: "grade" }
-                ListElement { title: "Abount"; source: "About.qml"; icon: "info" }
-                ListElement { title: "Settings"; source: "Settings.qml"; icon: "settings" }
-                ListElement { title: "Exit"; source: "Exit.qml"; icon: "exit_to_app" }
+                ListElement { title: "My todos"; source: "TodoView.qml"; icon: "list"; }
+                ListElement { title: "My notes"; source: "Notes.qml"; icon: "note"; }
+                ListElement { title: "My grade"; source : "Grade.qml"; icon: "grade"; }
+                ListElement { title: "Abount"; source: "About.qml"; icon: "info"; }
+                ListElement { title: "Settings"; source: "Settings.qml"; icon: "settings"; }
+                ListElement { title: "Exit"; source: "Exit.qml"; icon: "exit_to_app"; }
             }
             ScrollIndicator.vertical: ScrollIndicator { }
         }
@@ -129,10 +129,7 @@ ApplicationWindow {
     StackView {
         id: stackView
         anchors.fill: parent
-    }
 
-    Component.onCompleted: {
-        stackView.push("TodoView.qml")
     }
 }
 

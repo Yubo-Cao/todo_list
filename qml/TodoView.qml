@@ -1,9 +1,12 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Controls.Material 2.15
+import "components"
 
-Component {
+Item {
     id: root
+    property alias model: listView.model
 
     ColumnLayout {
         anchors {
@@ -12,42 +15,32 @@ Component {
         }
 
         // header
+
+
         RowLayout {
-            spacing: 16
-            RowLayout {
-                spacing: 4
-                MIcon {
-                    icon: "hamburger"
-                    size: 48
-                }
-                Text {
-                    text: "Task"
-                    font.pointSize: 24
-                    color: Material.accent
-                }
+            Layout.fillWidth: true
+            MIconLabel {
+                icon: "task"
+                text: "Task"
+                icon_size: 32
+                color: Material.accent
             }
             Item {
                 Layout.fillWidth: true
             }
-            Button {
-                padding: 16
-                Material.background: Material.background
-                contentItem: RowLayout {
-                    spacing: 4
-                    Text {
-                        text: "\ue164"
-                        font.family: "Material Icons"
-                        font.pixelSize: 24
-                        color: Material.accent
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                    Text {
-                        text: "Sort"
-                        font.pointSize: 16
-                        color: Material.accent
-                    }
-                }
+            ComboBox {
+                id: combo
+                model: ["All", "Active", "Completed"]
+                currentIndex: 0
             }
+        }
+
+        // task list
+        TodoListView {
+            y: 200
+            id: listView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 }
