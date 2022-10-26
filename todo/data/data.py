@@ -1,12 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, cast
 
-from PIL import Image
-
 from todo.globals import data_path
-from todo.model import YamlFileObserver
-from todo.model.observed import ObservedList
+from todo.data import YamlFileObserver, ObservedList
 
 
 @dataclass(frozen=True)
@@ -18,10 +16,22 @@ class TodoItem:
     title: str
     description: str = ""
     completed: bool = False
-    photo: Optional[Image.Image] = None
+    photo: Optional[Path] = None
     due_date: Optional[datetime] = None
-    subtasks: list["TodoItem"] = field(default_factory=list)
     created_date: datetime = field(default_factory=datetime.now)
 
 
 todo_list: ObservedList = cast(ObservedList, YamlFileObserver([], data_path / "todo_list.yaml").to_observable())
+
+
+@dataclass(frozen=True)
+class NoteItem:
+    """
+    Represents the notes
+    """
+
+    text: str = ""
+    photo: Optional[Path] = None
+
+
+note_list: ObservedList = cast(ObservedList, YamlFileObserver([], data_path / "note_list.yaml").to_observable())

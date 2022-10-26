@@ -16,9 +16,15 @@ ApplicationWindow {
     Material.primary: Material.Blue
     Material.accent: Material.Blue
 
-    FontLoader { source: "../fonts/MaterialIcons-Regular.ttf" }
-    FontLoader { source: "../fonts/Roboto-Regular.ttf" }
-    FontLoader { source: "../fonts/Roboto-Thin.ttf" }
+    FontLoader {
+        source: "../fonts/MaterialIcons-Regular.ttf"
+    }
+    FontLoader {
+        source: "../fonts/Roboto-Regular.ttf"
+    }
+    FontLoader {
+        source: "../fonts/Roboto-Thin.ttf"
+    }
 
     header: ToolBar {
         RowLayout {
@@ -29,7 +35,7 @@ ApplicationWindow {
 
             RoundButton {
                 Layout.alignment: Qt.AlignVCenter
-                 Material.background: "transparent"
+                Material.background: "transparent"
 
                 onClicked: function() {
                     drawer.open()
@@ -54,7 +60,7 @@ ApplicationWindow {
             RoundButton {
                 Layout.alignment: Qt.AlignVCenter
                 // flat
-                 Material.background: "transparent"
+                Material.background: "transparent"
 
                 contentItem: MIcon {
                     icon: "more_vert"
@@ -83,6 +89,8 @@ ApplicationWindow {
         }
     }
 
+
+
     Drawer {
         id: drawer
         width: 256
@@ -92,10 +100,11 @@ ApplicationWindow {
             id: listView
             currentIndex: -1
             anchors.fill: parent
+            model: navigationModel
 
             delegate: ItemDelegate {
                 width: parent.width
-                text: model.title
+                text: title
                 contentItem: MIconLabel {
                     icon: model.icon
                     text: model.title
@@ -107,32 +116,20 @@ ApplicationWindow {
                         listView.currentIndex = index
                         titleLabel.text = title
                         stackView.replace(source, {
-                            "model": todoModel
+                            "model": item_model,
+                            "controller": item_controller
                         })
                     }
                     drawer.close()
                 }
             }
 
-            model: ListModel {
-                ListElement { title: "My todos"; source: "TodoView.qml"; icon: "list"; }
-                ListElement { title: "My notes"; source: "Notes.qml"; icon: "note"; }
-                ListElement { title: "My grade"; source : "Grade.qml"; icon: "grade"; }
-                ListElement { title: "Abount"; source: "About.qml"; icon: "info"; }
-                ListElement { title: "Settings"; source: "Settings.qml"; icon: "settings"; }
-                ListElement { title: "Exit"; source: "Exit.qml"; icon: "exit_to_app"; }
-            }
-            ScrollIndicator.vertical: ScrollIndicator { }
+            ScrollIndicator.vertical: ScrollIndicator {}
         }
     }
 
     StackView {
         id: stackView
         anchors.fill: parent
-
     }
 }
-
-
-
-

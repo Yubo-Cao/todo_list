@@ -1,7 +1,7 @@
 from todo.globals import data_path, cache_path, log_path, config_path
 from todo.log import get_logger
-from todo.model import YamlFileObserver
-from todo.model.observed import ObservedDot
+from todo.data.observers import YamlFileObserver
+from todo.data.observed import ObservedDot
 
 logger = get_logger(__name__, use_config=False)
 

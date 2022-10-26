@@ -2,7 +2,10 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
+import QtQuick.Templates as T
 import QtQuick.Controls.Material 2.15
+import QtQuick.Controls.Material.impl
+import QtQuick.Window
 import "components"
 
 ApplicationWindow {
@@ -12,11 +15,14 @@ ApplicationWindow {
     height: 480
     title: qsTr("Hello World")
 
-    MImagePicker {
-        id: imagePicker
-        elevation: 0
-        anchors.centerIn: parent
-        width: 200
-        height: 200
+    Frame {
+        MEditableParagraph {
+            id: text
+            text: "Hello World"
+            anchors.centerIn: parent
+            onTextChanged: {
+                console.log(text)
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 import pytest
 
-from todo.model.observed import ObservedDict, ObservedDot, ObservedList, \
+from todo.data.observed import ObservedDict, ObservedDot, ObservedList, \
     observable, Notify, ALL
 
 

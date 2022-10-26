@@ -8,6 +8,7 @@ from PySide6.QtCore import QDateTime, QUrl
 from PySide6.QtGui import QPixmap, QImage
 
 from todo.globals import data_path
+from io import BytesIO
 
 
 def to_qt_data(data: Any) -> Any:
@@ -26,21 +27,30 @@ def to_qt_data(data: Any) -> Any:
     return data
 
 
-def save_image(path: str | Path) -> Path:
+def save_image(path_or_img: str | Path | Image.Image) -> Path:
     """
     Save an image to the data directory.
     """
 
-    path = Path(path)
+    data: bytes
+    if isinstance(path_or_img, QUrl):
+        path_or_img = Path(path_or_img.toLocalFile())
+    if isinstance(path_or_img, str):
+        path_or_img = Path(path_or_img)
+    if isinstance(path_or_img, Image.Image):
+        buf = BytesIO()
+        path_or_img.save(buf, format="PNG")
+        data = buf.getvalue()
+    else:
+        try:
+            data = path_or_img.read_bytes()
+        except AttributeError:
+            raise TypeError("Invalid image type")
 
-    if path.parent.parent == data_path:
-        print("Image already in data directory")
-        return path
-    dst = data_path / "Images" / md5(path.read_bytes()).hexdigest()
+    dst = (data_path / "images" / md5(data).hexdigest()).with_suffix(".png")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst = dst.with_suffix('.png')
     if not dst.exists():
-        with Image.open(path) as img:
+        with Image.open(path_or_img) as img:
             img.save(dst)
     return dst
 
